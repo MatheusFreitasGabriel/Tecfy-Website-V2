@@ -20,7 +20,7 @@ export default function PlansCardsGrouping(){
 
                 {/* Botões */}
                 <button 
-                    className={`relative z-10 px-6 py-3 text-sm md:text-base font-bold transition-colors duration-200 ${
+                    className={`relative cursor-pointer z-10 px-6 py-3 text-sm md:text-base font-bold transition-colors duration-200 ${
                         type === "monthly" ? "text-background" : "text-white/50"
                     }`} 
                     onClick={() => setType("monthly")}
@@ -29,7 +29,7 @@ export default function PlansCardsGrouping(){
                 </button>
 
                 <button 
-                    className={`relative z-10 px-6 py-3 text-sm md:text-base font-bold transition-colors duration-200 ${
+                    className={`relative z-10 cursor-pointer px-6 py-3 text-sm md:text-base font-bold transition-colors duration-200 ${
                         type === "oneTime" ? "text-background" : "text-white/50"
                     }`} 
                     onClick={() => setType("oneTime")}

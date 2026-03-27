@@ -76,6 +76,27 @@
   --font-sans: var(--font-sans);
 }
 
+/* Animação do Carrossel de Logos (Marquee) */
+@keyframes marquee {
+  0% {
+    transform: translateX(0%);
+  }
+  100% {
+    /* Move exatamente a metade da largura total do container */
+    transform: translateX(-50%);
+  }
+}
+
+.animate-marquee {
+  /* 20s = duração, linear = velocidade constante, infinite = loop eterno */
+  animation: marquee 80s linear infinite;
+}
+
+/* Bônus de usabilidade: pausa a esteira se o usuário colocar o mouse em cima */
+.animate-marquee:hover {
+  animation-play-state: paused;
+}
+
 
 /* Estilos Globais Gerais*/
 body {
