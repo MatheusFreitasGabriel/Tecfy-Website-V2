@@ -1,5 +1,5 @@
 import { plansCardsData } from "./PlansCardsData";
-import  IconComponent  from "react-icons"
+
 
 type Props = {
   type: "monthly" | "oneTime";

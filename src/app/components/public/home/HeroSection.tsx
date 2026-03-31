@@ -12,7 +12,6 @@ export default function HeroSection() {
         alt="Imagem de fundo"
         fill
         unoptimized
-
         priority
       />
 

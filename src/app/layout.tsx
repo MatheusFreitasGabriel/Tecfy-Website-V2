@@ -1,5 +1,7 @@
 import type { Metadata } from "next";
 import "../styles/globals.css";
+import Faq from "./components/public/global/faq/Faq";
+import Cta from "./components/public/global/Cta"
 
 export const metadata: Metadata = {
   title: "Tecfy | Criação de Sites, Apps e Softwares",
@@ -14,7 +16,11 @@ export default function RootLayout({
   return (
     <html lang="pt-BR">
       <body className='antialiased'>
-        {children}
+        <main >
+          {children}
+          <Faq></Faq>
+          <Cta></Cta>
+        </main>
       </body>
     </html>
   );
