@@ -8,18 +8,18 @@ export default function Page() {
   return <main className="flex flex-col gap-[128px] lg:gap-[256px]">
 
     {/*Hero Section*/}
-    <HeroSection></HeroSection>
+    <HeroSection id="hero"/>
 
     {/* How it works Section */}
-    <HowWorks></HowWorks>
+    <HowWorks id="how-it-works"/>
 
     {/* Cases Section */}
-    <Cases></Cases>
+    <Cases id="cases"/>
 
     {/* Plans and Prices Section */}
-    <Plans></Plans>
+    <Plans id="prices"/>
 
     {/* Testimonials Section */}
-    <Testimonials></Testimonials>
+    <Testimonials id="testimonials"/>
   </main>;
 }

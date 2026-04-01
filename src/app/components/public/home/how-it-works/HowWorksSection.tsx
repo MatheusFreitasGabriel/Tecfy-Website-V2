@@ -1,8 +1,8 @@
 import HowWorksCard from "./HowWorksCard";
 
-export default function HowWorks(){
+export default function HowWorks({id}: {id: string}){
     return (
-        <section className="w-full flex flex-col items-center gap-8 lg:gap-12">
+        <section id={id} className="w-full flex flex-col items-center gap-8 lg:gap-12 scroll-mt-34">
             {/* Agrupamento textual indicativo */}
             <div  className="flex flex-col gap-4 items-center px-4">
                 <span className="text-[14px] text-secondary font-medium">COMO FUNCIONA</span>

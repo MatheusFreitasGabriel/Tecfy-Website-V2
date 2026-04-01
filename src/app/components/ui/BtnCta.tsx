@@ -1,9 +1,13 @@
 "use client";
 
+import { useRouter } from "next/navigation";
+
 export default function BtnCta() {
+  const router = useRouter();
+
   function handleClick() {
-    console.log("Button clicked");
-  }
+    router.push("/contato")
+  };
 
   return (
     <button

@@ -1,8 +1,8 @@
 import CasesCards from "./CasesCards";
 
-export default function Cases(){
+export default function Cases({id}: {id: string}){
     return (
-        <section className="w-full flex flex-col items-center gap-6 lg:gap-12">
+        <section id={id} className="w-full flex flex-col items-center gap-6 lg:gap-12 scroll-mt-36">
             {/* Agrupamento textual indicativo */}
             <div  className="flex flex-col gap-4 items-center px-4">
                 <span className="text-[14px] text-secondary font-medium">PORTFÓLIO</span>

@@ -97,7 +97,9 @@
   animation-play-state: paused;
 }
 
-
+html {
+  scroll-behavior: smooth;
+}
 /* Estilos Globais Gerais*/
 body {
   background: var(--background);
@@ -105,5 +107,4 @@ body {
   font-family: var(--font-sans);
   font-weight: var(--font-regular);
   overflow-x: hidden;
-  
 }

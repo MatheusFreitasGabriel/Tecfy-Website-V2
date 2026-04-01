@@ -1,9 +1,9 @@
 import Image from "next/image";
 import BtnCta from "../../ui/BtnCta";
 
-export default function HeroSection() {
+export default function HeroSection({id}: {id: string}) {
   return (
-    <section className="relative h-screen w-full flex items-center justify-center bg-black">
+    <section id={id} className="relative h-screen w-full flex items-center justify-center bg-black scroll-mt-34">
       
       {/* Imagem de fundo */}
       <Image
