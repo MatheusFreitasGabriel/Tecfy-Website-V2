@@ -13,7 +13,7 @@ export const footerNavigation = [
       links: [
         { label: 'contato@tecfy.dev', href: 'mailto:contato@tecfy.dev' },
         { label: '4077-4506', href: 'tel:1140774506' },
-        { label: '94077-4506', href: 'https://wa.me/5511940774506', external: true },
+        { label: '(11) 94077-4506', href: 'https://wa.me/5511940774506', external: true },
       ]
     },
     {

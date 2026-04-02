@@ -39,7 +39,7 @@ export default function PlansCards({ type }: Props) {
                 <div className="flex flex-row gap-3.5 items-end">
                   <h3 className="text-2xl font-bold">{plan.namePlan.toUpperCase()}</h3>
                   {isHighlight && (
-                    <span className="text-[12px] text-secondary font-bold">MAIS ASSINADO</span>
+                    <span className="text-[12px] text-secondary font-bold uppercase">Mais assinados</span>
                   )}
                 </div>
 

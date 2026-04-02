@@ -12,8 +12,8 @@ export default function Cta(){
                 unoptimized
             />
             <div className="relative z-10 max-w-[1440px] flex flex-col items-center gap-6 lg:gap-12">
-                <h2 className="leading-none text-[36px] text-text-primary text-center font-semibold sm:text-[48px] 2xl:text-[56px]">
-                    ESCOLHA A TECFY PARA IMPULSIONAR O FUTURO DA SUA EMPRESA.
+                <h2 className="leading-none text-[36px] text-text-primary text-center font-semibold sm:text-[48px] 2xl:text-[56px] uppercase">
+                    Escolha a Tecfy para impulsionar o futuro da sua empresa.
                 </h2>
                 <BtnCta></BtnCta>
             </div>

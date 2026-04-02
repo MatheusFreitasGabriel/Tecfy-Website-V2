@@ -7,19 +7,19 @@ type CasesDataType = {
 export const CaseDetailsData: CasesDataType[] = [
     {
         imageCase: "/assets/cases/npw.webp",
-        projectName: "NEW POWER",
-        typePlanProject: "WEBSITE ECOMMERCE"
+        projectName: "New Power",
+        typePlanProject: "Website Ecommerce"
     },
 
     {
         imageCase: "/assets/cases/brf.webp",
-        projectName: "BRAZIFLON",
-        typePlanProject: "WEBSITE ERP"
+        projectName: "Braziflon",
+        typePlanProject: "Website ERP"
     },
 
     {
         imageCase: "/assets/cases/rnk.webp",
-        projectName: "RANKEE",
-        typePlanProject: "APP MULTIPLATAFORMA"
+        projectName: "Rankee",
+        typePlanProject: "App Multiplataforma"
     },
 ]

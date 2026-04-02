@@ -20,9 +20,9 @@ export default function HeroSection({id}: {id: string}) {
 
         {/* Agrupamento de conteudo textual */}
         <div className="flex flex-col gap-6 px-3 items-center">
-          <p className=" text-center text-[14px] text-text-primary sm:text-[14px] lg:text-[16px] xl:text-[16px]">
-              EXELÊNCIA NA CRIAÇÃO DE <br className="hidden sm:block" />
-              WEBSITES, APLICATIVOS, SOFTWARES E INTELIGÊNCIA ARTIFICIAL.
+          <p className="uppercase text-center text-[14px] text-text-primary sm:text-[14px] lg:text-[16px] xl:text-[16px]">
+              Excelência na criação de <br className="hidden sm:block" />
+              Websites, Aplicativos, Softwares e Inteligência Artificial.
           </p>
 
           <h1 className="
@@ -35,14 +35,15 @@ export default function HeroSection({id}: {id: string}) {
               lg:text-[102px]
               2xl:text-[128px]
               mix-blend-difference
+              uppercase
           ">
-              TECNOLOGIA <br/>
-              TRANSFORMA <br/>
-              FUTURO
+              Tecnologia <br/>
+              Transforma <br/>
+              Futuro
           </h1>
-          <p className="text-center text-text-primary text-[14px] sm:text-[14px] lg:text-[16px] xl:text-[16px]">
-              AQUI AS IDEIAS SE TRANSFORMAM EM REALIDADE COM <br className="hidden sm:block" />
-              QUALIDADE, SEGURANÇA, ARQUITETURA E RAPIDEZ
+          <p className="text-center text-text-primary text-[14px] sm:text-[14px] lg:text-[16px] xl:text-[16px] uppercase">
+            Aqui as ideias se transformam em realidade com <br className="hidden sm:block" />
+            qualidade, segurança, arquitetura e rapidez
           </p>
         </div>
 

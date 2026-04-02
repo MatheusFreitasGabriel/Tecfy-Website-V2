@@ -69,7 +69,7 @@ export default function HowWorksCard() {
 
                   <div className="flex flex-col gap-3">
                     <h3
-                      className={`text-2xl md:text-3xl lg:text-4xl font-semibold ${titleClassName}`}
+                      className={`text-2xl md:text-3xl lg:text-4xl font-semibold ${titleClassName} uppercase`}
                     >
                       {cardStep.titleCard}
                     </h3>

@@ -12,7 +12,7 @@ type ServiceWorkflowStep = {
 export const InformationCardsHowTheServicesWorks: ServiceWorkflowStep[] = [
     {
         iconCard: FaLightbulb,
-        titleCard: "SUA IDEIA",
+        titleCard: "Sua ideia",
         textCard: "Alinhamos objetivos, definimos o escopo e traçamos o caminho do projeto."
     },
 
@@ -24,13 +24,13 @@ export const InformationCardsHowTheServicesWorks: ServiceWorkflowStep[] = [
 
     {
         iconCard: FaCode,
-        titleCard: "CÓDIGO",
+        titleCard: "Código",
         textCard: "Desenvolvemos o código, a arquitetura e segurança e fluxograma do seu sistema."
     },
 
     {
         iconCard: FaTrophy,
-        titleCard: "LANÇAMENTO",
+        titleCard: "Lançamento",
         textCard: "Lançamento grandioso, feito para aguentar trafego e a escalabilidade e o futuro do seu projeto!"
     },
 ]

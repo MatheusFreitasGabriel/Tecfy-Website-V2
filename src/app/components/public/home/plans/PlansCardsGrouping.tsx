@@ -20,21 +20,21 @@ export default function PlansCardsGrouping(){
 
                 {/* Botões */}
                 <button 
-                    className={`relative cursor-pointer z-10 px-6 py-3 text-sm md:text-base font-bold transition-colors duration-200 ${
+                    className={`relative cursor-pointer z-10 px-6 py-3 text-sm md:text-base font-bold transition-colors duration-200 uppercase ${
                         type === "monthly" ? "text-background" : "text-white/50"
                     }`} 
                     onClick={() => setType("monthly")}
                 >
-                    PLANOS MENSAIS
+                    Planos Mensais
                 </button>
 
                 <button 
-                    className={`relative z-10 cursor-pointer px-6 py-3 text-sm md:text-base font-bold transition-colors duration-200 ${
+                    className={`relative z-10 cursor-pointer px-6 py-3 text-sm md:text-base font-bold transition-colors duration-200 uppercase ${
                         type === "oneTime" ? "text-background" : "text-white/50"
                     }`} 
                     onClick={() => setType("oneTime")}
                 >
-                    PLANOS ÚNICOS
+                    Planos Únicos
                 </button>
             </div>
 
