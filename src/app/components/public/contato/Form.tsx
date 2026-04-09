@@ -7,8 +7,11 @@ import { validateEmail, validatePhone } from '@/shemas/validationSchema';
 import { LeadInsertResponseData, LeadRequest } from '@/services/types';
 import { insertLead, LeadInsertError } from '@/services/leads/insertLead';
 import ApiFeedbackModal from './ApiFeedbackModal';
+import { CONTACT_THANKS_SESSION_KEY } from '@/lib/contactThanksSession';
+import { useRouter } from 'next/navigation';
 
 export default function Form() {
+  const router = useRouter();
   const [formData, setFormData] = useState<LeadRequest>({
     lead_name: "",
     lead_email: "",
@@ -47,10 +50,15 @@ export default function Form() {
       setIsLoading(true);
       const data = await insertLead(formData);
       setResponseData(data);
-      setModalType("success");
-      setIsModalOpen(true);
+      sessionStorage.setItem(
+        CONTACT_THANKS_SESSION_KEY,
+        JSON.stringify({
+          lead_name: formData.lead_name.trim(),
+          lead_email: formData.lead_email.trim(),
+        })
+      );
+      router.push("/thanks");
 
-      console.log("Lead enviado com sucesso:", data);
     } catch (error) {
       console.error("Erro ao enviar lead:", error);
       if (error instanceof LeadInsertError) {
