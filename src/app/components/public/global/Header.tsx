@@ -3,6 +3,7 @@
 import React, { useState, useEffect } from 'react'
 import Image from 'next/image'
 import Link from 'next/link'
+import { usePathname } from 'next/navigation'
 import BtnCta from '../../ui/BtnCta'
 import { FaBars, FaXmark } from 'react-icons/fa6'
 
@@ -16,8 +17,10 @@ const MAIN_NAV_LINKS = [
 ] as const
 
 export default function Header() {
+  const pathname = usePathname()
   const [isScrolled, setIsScrolled] = useState(false)
   const [isMobileMenuOpen, setMobileMenuOpen] = useState(false)
+  const isPoliticasPage = pathname.startsWith('/politicas')
 
   useEffect(() => {
     const handleScroll = () => {
@@ -32,11 +35,21 @@ export default function Header() {
     document.body.style.overflow = isMobileMenuOpen ? 'hidden' : 'unset'
   }, [isMobileMenuOpen])
 
+  useEffect(() => {
+    if (isPoliticasPage && isMobileMenuOpen) {
+      setMobileMenuOpen(false)
+    }
+  }, [isPoliticasPage, isMobileMenuOpen])
+
   const toggleMobileMenu = () => setMobileMenuOpen((open) => !open)
   const closeMobileMenu = () => setMobileMenuOpen(false)
 
   const showSolidHeader = isScrolled || isMobileMenuOpen
   const showDesktopNav = isScrolled
+
+  if (isPoliticasPage) {
+    return null
+  }
 
   return (
     <>
