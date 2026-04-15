@@ -133,6 +133,8 @@ export default function Form() {
         responseData={responseData}
         errorMessage={errorMessage}
         onClose={closeModal}
+        email={formData.lead_email}
+        name={formData.lead_name}
         
       />
     </div>
