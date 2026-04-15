@@ -1,7 +1,7 @@
 import { ApiResponse, LeadInsertResponseData, LeadRequest } from "@/services/types";
 import { getApiUrl } from "@/services/api/apiConfig";
 
-const LEADS_INSERT_ENDPOINT = "/api/v1/leads/insert";
+const LEADS_INSERT_ENDPOINT = "/leads/insert";
 
 export class LeadInsertError extends Error {
   constructor(
