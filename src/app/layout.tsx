@@ -5,6 +5,7 @@ import Faq from "./components/public/global/faq/Faq";
 import Cta from "./components/public/global/Cta";
 import Footer from "./components/public/global/footer/Footer";
 import Header from "./components/public/global/Header";
+import { SpeedInsights } from "@vercel/speed-insights/next"
 
 // 1. Configuração de Viewport (Padrão Next.js 14+)
 export const viewport: Viewport = {
