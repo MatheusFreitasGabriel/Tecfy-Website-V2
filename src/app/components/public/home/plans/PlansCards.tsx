@@ -1,3 +1,6 @@
+"use client";
+
+import { useRouter } from "next/navigation";
 import { plansCardsData } from "./PlansCardsData";
 
 
@@ -13,6 +16,11 @@ export default function PlansCards({ type }: Props) {
   type === "monthly"
     ? "w-full flex flex-row gap-4 overflow-x-auto snap-x snap-mandatory pb-4 md:grid md:grid-cols-2 md:overflow-visible md:pb-0 lg:grid-cols-4"
     : "w-full flex flex-col lg:flex-row gap-4 md:gap-6 justify-center";
+
+    const router = useRouter();
+    function handleClick() {
+      router.push("/contato")
+    };
 
   return (
     // 2. Aplicando a variável de classes no container
@@ -58,7 +66,7 @@ export default function PlansCards({ type }: Props) {
                 <p className="text-[16px] font-normal ">{plan.descriptionPlan}</p>
 
                 {/* Button Card */}
-                <button className="bg-white h-9 md:h-10 cursor-pointer  hover:bg-white/80 transition-colors duration-300 ease-in-out">
+                <button onClick={handleClick} className="bg-white h-9 md:h-10 cursor-pointer  hover:bg-white/80 transition-colors duration-300 ease-in-out">
                   <span className="text-background-secondary font-semibold">Assinar {plan.namePlan}</span>
                 </button>
               </div>
