@@ -22,7 +22,7 @@ export default function Testimonials({id}: {id: string}){
 
             <TestimonialsLogos></TestimonialsLogos>
 
-            <TestimonialsPersons></TestimonialsPersons>
+            {/* <TestimonialsPersons></TestimonialsPersons> */}
         </section> 
     );
 }

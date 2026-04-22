@@ -39,7 +39,7 @@ export const metadata: Metadata = {
     url: "https://www.tecfy.dev",
     images: [
       {
-        url: "https://www.tecfy.dev/assets/og-image.png",
+        url: "https://www.tecfy.dev/assets/og-image.jpg",
         width: 1200,
         height: 630,
       },
@@ -51,7 +51,7 @@ export const metadata: Metadata = {
     card: "summary_large_image",
     title: "Tecfy | Criação de Sites, Apps e IA",
     description: "Transforme seu negócio com Software, Apps e IA da Tecfy.",
-    images: ["https://www.tecfy.dev/assets/og-image.png"],
+    images: ["https://www.tecfy.dev/assets/og-image.jpg"],
   },
 };
 
