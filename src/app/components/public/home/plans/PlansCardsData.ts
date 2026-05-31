@@ -18,7 +18,8 @@ type CardsDataType = {
     priceLabel?: string,
     descriptionPlan: string,
     featuresPlan: FeatureItem[],
-    highlightPlan: boolean
+    highlightPlan: boolean,
+    discount: boolean,
   };
 
 {/* Estrutura de dados de cada plano */}
@@ -51,6 +52,7 @@ export const plansCardsData: CardsDataType[] = [
             },
         ],
         highlightPlan: false,
+        discount: true, 
     },
 
     {
@@ -81,6 +83,8 @@ export const plansCardsData: CardsDataType[] = [
             },
         ],
         highlightPlan: true,
+        discount: true,
+        
     },
 
     {
@@ -111,6 +115,7 @@ export const plansCardsData: CardsDataType[] = [
             },
         ],
         highlightPlan: false,
+        discount: true,
     },
 
     {
@@ -141,6 +146,7 @@ export const plansCardsData: CardsDataType[] = [
             },
         ],
         highlightPlan: false,
+        discount: true,
     },
 
     {
@@ -172,6 +178,7 @@ export const plansCardsData: CardsDataType[] = [
             },
         ],
         highlightPlan: false,
+        discount: false,
     },
 
     {
@@ -203,5 +210,6 @@ export const plansCardsData: CardsDataType[] = [
             },
         ],
         highlightPlan: false,
+        discount:false,
     },
 ];
