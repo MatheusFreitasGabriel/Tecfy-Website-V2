@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { maskPhoneNumber } from '@/utils/masks';
 import Input from '../../ui/Input';
 import { validateEmail, validatePhone } from '@/shemas/validationSchema';
@@ -10,7 +10,11 @@ import ApiFeedbackModal from './ApiFeedbackModal';
 import { CONTACT_THANKS_SESSION_KEY } from '@/lib/contactThanksSession';
 import { useRouter } from 'next/navigation';
 
-export default function Form() {
+type FormProps = {
+  selectedPlan?: string | null;
+};
+
+export default function Form({ selectedPlan }: FormProps) {
   const router = useRouter();
   const [formData, setFormData] = useState<LeadRequest>({
     lead_name: "",
@@ -18,6 +22,15 @@ export default function Form() {
     lead_phone: "",
     interest_plan: ""
   });
+
+  useEffect(() => {
+    if (selectedPlan) {
+      setFormData(prev => ({
+        ...prev,
+        interest_plan: selectedPlan
+      }));
+    }
+  }, [selectedPlan]);
   const [isLoading, setIsLoading] = useState(false);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [modalType, setModalType] = useState<"success" | "error" | "conflict" | "rate_limit">("success");
@@ -85,6 +98,13 @@ export default function Form() {
   return (
     <div className='max-w-[592px] w-full p-2 md:p-4 border border-[#252525]'>
       <form onSubmit={handleSubmit} className=' flex flex-col gap-6 justify-between p-4 md:p-9 border border-[#252525]'>
+        {formData.interest_plan && (
+          <div className="px-4 py-3 bg-primary/10 border border-primary rounded">
+            <p className="text-sm text-secondary font-medium">
+              Plano selecionado: <span className="text-primary font-semibold">{formData.interest_plan}</span>
+            </p>
+          </div>
+        )}
         <Input 
           id="nome"
           label="Nome completo"

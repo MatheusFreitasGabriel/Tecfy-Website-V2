@@ -17,8 +17,8 @@ export default function PlansCards({ type }: Props) {
       : "w-full flex flex-col lg:flex-row gap-4 md:gap-6 justify-center flex-1";
 
   const router = useRouter();
-  function handleClick() {
-    router.push("/contato");
+  function handleClick(planName: string) {
+    router.push(`/contato?plan=${encodeURIComponent(planName)}`);
   }
 
   return (
@@ -85,7 +85,7 @@ export default function PlansCards({ type }: Props) {
                   <p className="text-[16px] font-normal">{plan.descriptionPlan}</p>
 
                   {/* Button Card */}
-                  <button onClick={handleClick} className="bg-white h-9 md:h-10 cursor-pointer hover:bg-white/80 transition-colors duration-300 ease-in-out">
+                  <button onClick={() => handleClick(plan.namePlan)} className="bg-white h-9 md:h-10 cursor-pointer hover:bg-white/80 transition-colors duration-300 ease-in-out">
                     <span className="text-background-secondary font-semibold">Assinar {plan.namePlan}</span>
                   </button>
                 </div>

@@ -1,6 +1,12 @@
+"use client";
+
+import { useSearchParams } from "next/navigation";
 import Form from "../../components/public/contato/Form";
 
 export default function Contato() {
+    const searchParams = useSearchParams();
+    const planParam = searchParams.get("plan");
+
     return (
         <section className="w-full min-h-screen flex justify-center items-center">
             <div className="flex flex-col h-full w-full max-w-[1440px] py-32 px-6 justify-between gap-6 md:flex-row md:gap-28 ">
@@ -21,7 +27,7 @@ export default function Contato() {
                         </div>
                     </div>
                 </div>
-                <Form/>
+                <Form selectedPlan={planParam}/>
             </div>
         </section>
     );
