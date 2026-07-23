@@ -1,7 +1,4 @@
 import { ApiResponse, LeadInsertResponseData, LeadRequest } from "@/services/types";
-import { getApiUrl } from "@/services/api/apiConfig";
-
-const LEADS_INSERT_ENDPOINT = "/leads/insert";
 
 export class LeadInsertError extends Error {
   constructor(
@@ -15,7 +12,7 @@ export class LeadInsertError extends Error {
 }
 
 export async function insertLead(lead: LeadRequest): Promise<LeadInsertResponseData> {
-  const response = await fetch(getApiUrl(LEADS_INSERT_ENDPOINT), {
+  const response = await fetch("/api/leads", {
     method: "POST",
     headers: {
       "Content-Type": "application/json"

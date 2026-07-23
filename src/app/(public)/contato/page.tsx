@@ -1,9 +1,10 @@
 "use client";
 
+import { Suspense } from "react";
 import { useSearchParams } from "next/navigation";
 import Form from "../../components/public/contato/Form";
 
-export default function Contato() {
+function ContatoContent() {
     const searchParams = useSearchParams();
     const planParam = searchParams.get("plan");
 
@@ -30,5 +31,13 @@ export default function Contato() {
                 <Form selectedPlan={planParam}/>
             </div>
         </section>
+    );
+}
+
+export default function Contato() {
+    return (
+        <Suspense fallback={<div className="w-full min-h-screen flex items-center justify-center">Carregando...</div>}>
+            <ContatoContent />
+        </Suspense>
     );
 }

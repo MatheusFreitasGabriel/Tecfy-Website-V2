@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { maskPhoneNumber } from '@/utils/masks';
 import Input from '../../ui/Input';
 import { validateEmail, validatePhone } from '@/shemas/validationSchema';
@@ -9,6 +9,7 @@ import { insertLead, LeadInsertError } from '@/services/leads/insertLead';
 import ApiFeedbackModal from './ApiFeedbackModal';
 import { CONTACT_THANKS_SESSION_KEY } from '@/lib/contactThanksSession';
 import { useRouter } from 'next/navigation';
+import TurnstileWidget, { TurnstileWidgetHandle } from './TurnstileWidget';
 
 type FormProps = {
   selectedPlan?: string | null;
@@ -16,12 +17,15 @@ type FormProps = {
 
 export default function Form({ selectedPlan }: FormProps) {
   const router = useRouter();
+  const turnstileRef = useRef<TurnstileWidgetHandle>(null);
   const [formData, setFormData] = useState<LeadRequest>({
     lead_name: "",
     lead_email: "",
     lead_phone: "",
-    interest_plan: ""
+    interest_plan: "",
+    turnstile_token: ""
   });
+  const [turnstileToken, setTurnstileToken] = useState<string | null>(null);
 
   useEffect(() => {
     if (selectedPlan) {
@@ -42,10 +46,11 @@ export default function Form({ selectedPlan }: FormProps) {
     setFormData({ ...formData, lead_phone: formattedPhone });
   };
 
-  const isFormValid = 
+  const isFormValid =
     formData.lead_name.trim().length > 0 &&
     validateEmail(formData.lead_email) &&
-    validatePhone(formData.lead_phone);
+    validatePhone(formData.lead_phone) &&
+    Boolean(turnstileToken);
 
   const closeModal = () => {
     setIsModalOpen(false);
@@ -56,12 +61,15 @@ export default function Form({ selectedPlan }: FormProps) {
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
 
-    
-    if (!isFormValid) return; 
+    if (!isFormValid) return;
 
     try {
       setIsLoading(true);
-      const data = await insertLead(formData);
+      const requestData: LeadRequest = {
+        ...formData,
+        turnstile_token: turnstileToken as string,
+      };
+      const data = await insertLead(requestData);
       setResponseData(data);
       sessionStorage.setItem(
         CONTACT_THANKS_SESSION_KEY,
@@ -92,6 +100,8 @@ export default function Form({ selectedPlan }: FormProps) {
       setIsModalOpen(true);
     } finally {
       setIsLoading(false);
+      turnstileRef.current?.reset();
+      setTurnstileToken(null);
     }
   };
 
@@ -105,6 +115,10 @@ export default function Form({ selectedPlan }: FormProps) {
             </p>
           </div>
         )}
+        <TurnstileWidget
+          ref={turnstileRef}
+          onTokenChange={setTurnstileToken}
+        />
         <Input 
           id="nome"
           label="Nome completo"

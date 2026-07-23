@@ -2,124 +2,105 @@
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
-## Quick Start
+## Overview
 
-### Development Commands
-- **Start dev server**: `npm run dev` (runs on http://localhost:3000)
-- **Build for production**: `npm build`
+Marketing website for Tecfy (a Brazilian software house). Single-language pt-BR site whose
+primary job is lead generation: visitors browse plans, submit a contact form (protected by
+Cloudflare Turnstile anti-bot verification), and land on a thank-you page where they can schedule
+a meeting. Leads are written to Firebase Firestore via a Next.js Route Handler at `/api/leads`;
+no external API is used.
+
+## Commands
+
+- **Dev server**: `npm run dev` → http://localhost:3000
+- **Production build**: `npm run build` (not `npm build`)
 - **Run production build**: `npm start`
-- **Lint code**: `npm run lint`
-- **Fix linting issues**: `npm run lint:fix`
+- **Lint**: `npm run lint` / auto-fix: `npm run lint:fix`
+
+There is no test framework configured — no test runner, no test scripts.
 
 ## Tech Stack
 
-- **Framework**: Next.js 16 with React 19 (Server/Client Components)
-- **Language**: TypeScript 5
-- **Styling**: Tailwind CSS 4 with PostCSS
-- **Linting**: ESLint 10 with Next.js core-web-vitals and TypeScript rules
-- **Analytics**: Vercel Analytics + Speed Insights
-- **Third-party integrations**: 
-  - Cal.com embed for scheduling (calendars)
-  - Adopt.io for cookie banners
-  - Google Analytics (GTM)
+- **Next.js 16** (App Router) + **React 19**, **TypeScript 5**
+- **Tailwind CSS 4** (via `@tailwindcss/postcss`), configured entirely in CSS — see theming below
+- **Turbopack is explicitly disabled** in `next.config.ts` (`experimental.turbopack: false`)
+- Fonts: local **InstrumentSans** loaded via `@font-face` in `src/styles/globals.css` (this repo
+  does *not* use `next/font`; the README's mention of Geist is stale boilerplate)
+- `swiper` (carousels), `react-icons` (plan/feature icons), `@calcom/embed-react` (scheduling)
+- Analytics: Vercel Analytics + Speed Insights (in `layout.tsx`), plus Google Analytics/GTM and
+  the Adopt.io cookie banner injected as `<Script>` tags in `layout.tsx`
 
-## Project Structure
+## Architecture
 
-```
-src/
-├── app/
-│   ├── (public)/              # Public routes using route groups
-│   │   ├── page.tsx           # Home page (/)
-│   │   ├── contato/           # Contact page
-│   │   ├── thanks/            # Thank you page (post-contact form)
-│   │   └── politicas/         # Legal pages (privacy, terms, cookies)
-│   ├── (admin)/               # Admin routes (in progress)
-│   ├── components/            # Reusable components
-│   │   ├── public/            # Components used on public pages
-│   │   │   ├── home/          # Home page sections (Hero, HowWorks, Cases, Plans, Testimonials)
-│   │   │   ├── global/        # Shared layout components (Header, Footer, FAQ, CTA)
-│   │   │   └── contato/       # Contact form components
-│   │   └── ui/                # Reusable UI components (Button, Input, CardTilt)
-│   ├── layout.tsx             # Root layout with metadata, scripts, and header/footer
-│   └── [various metadata files]
-├── services/                  # External API and service calls
-│   ├── api/                   # API configuration
-│   └── leads/                 # Lead management endpoints
-├── lib/                       # Utilities
-├── styles/                    # Global CSS
-└── schemas/                   # Validation schemas
-public/
-├── assets/                    # Images, fonts, logos, case study assets
-└── [robots.txt, sitemap.xml]
-```
+### Routing
+Only one route group exists: `(public)`. It uses Next.js route groups purely for organization —
+the group name does not appear in the URL. Routes: `/` (home), `/contato`, `/thanks`,
+and `/politicas/*` (privacidade, termos, cookies). There is **no admin area** — an `(admin)`
+group existed previously but has been removed; ignore any references to it.
 
-## Key Architecture Decisions
+### Layout composition
+`src/app/layout.tsx` is the single root layout and wraps every page with, in order:
+`<Header/>`, then `<main>{children}<Faq/><Cta/></main>`, then `<Footer/>`. This means the FAQ and
+CTA sections appear at the bottom of **every** page automatically — individual pages must not add
+their own. It also owns all global SEO metadata (Open Graph, Twitter, canonical) and the
+third-party `<Script>` injections.
 
-### Route Groups
-The app uses Next.js route groups `(public)` and `(admin)` to organize pages without affecting the URL structure. This keeps related pages together logically while maintaining clean URLs.
+### The lead-capture flow (the core feature — spans several files)
+1. **Plan selection** — `components/public/home/plans/PlansCards.tsx`: each "Assinar {plan}" button
+   calls `router.push('/contato?plan=<planName>')`.
+2. **Contact page** — `(public)/contato/page.tsx`: reads the `?plan` query param via
+   `useSearchParams` and passes it to `<Form selectedPlan={...}/>`.
+3. **Form submit** — `components/public/contato/Form.tsx`: validates client-side, then calls
+   `insertLead()` (`services/leads/insertLead.ts`), which POSTs a `LeadRequest`
+   (`{ lead_name, lead_email, lead_phone, interest_plan }`) to `/leads/insert`.
+4. **Success** — the form writes `{ lead_name, lead_email }` to `sessionStorage` under the key in
+   `src/lib/contactThanksSession.ts` (`tecfy_contact_thanks`), then `router.push('/thanks')`.
+5. **Thank-you page** — `(public)/thanks/page.tsx` is **gated by that sessionStorage key**: if the
+   key is missing it redirects to `/contato`. When present, it prefills the Cal.com embed
+   (`tecfydev/briefing-sem-modestia`, namespace `30min`) with the lead's name/email.
 
-### Layout Composition
-The root layout (`src/app/layout.tsx`) wraps all pages with:
-- Global metadata and SEO configuration (with Open Graph, Twitter cards, canonical URLs)
-- Analytics scripts (Google Analytics, Vercel Speed Insights)
-- Shared layout components (Header, Footer, FAQ section, CTA section)
-- This means child pages only need to define their own unique content
+Cal.com scheduling lives **only on `/thanks`**, not on the contact form.
 
-### Component Organization
-- **Public components** live in `src/app/components/public/` and are grouped by page section or feature
-- **UI components** in `src/app/components/ui/` are atomic, reusable building blocks
-- Data (e.g., testimonials, plans, FAQ items) is typically colocated near its display component as `.ts` files (e.g., `TestimonialsPersonsData.ts`)
+Error handling: `insertLead` throws `LeadInsertError` carrying the HTTP status. `Form.tsx` maps
+status → `ApiFeedbackModal` type: **409 → conflict**, **429 → rate_limit**, otherwise **error**.
 
-### Service Layer
-API calls are centralized in `src/services/` to avoid scattered fetch calls. The leads service handles form submissions to external endpoints.
+### Service layer & lead capture
+`src/services/leads/insertLead.ts` POSTs lead data (including a Cloudflare Turnstile token) to
+the local `/api/leads` endpoint. Request/response types live in `src/services/types.ts`. The
+Route Handler (`src/app/api/leads/route.ts`) validates input, verifies the Turnstile token
+against Cloudflare, and writes to Firestore via the Admin SDK singleton at `src/lib/firebaseAdmin.ts`.
+Turnstile is verified server-side; the token is single-use and must be reset after each submit
+attempt.
 
-## Development Notes
+### Theming (Tailwind v4, CSS-first)
+There is **no `tailwind.config.js`**. All design tokens are CSS variables defined in
+`src/styles/globals.css`: raw values in `:root`, then re-exported to Tailwind via the `@theme`
+block as `--color-*` / `--font-*`. This generates custom utility classes used throughout the app —
+e.g. `bg-background-secondary`, `text-text-primary`, `text-secondary`, `border-border-primary`.
+When adding UI, use these token classes instead of hardcoded hex/Tailwind palette colors. The site
+is a fixed dark theme (black background); there is no light-mode toggle.
 
-### Styling
-- Uses Tailwind CSS v4 with PostCSS. Global styles in `src/styles/globals.css`
-- Custom utility components like `CardTilt` (interactive tilt effect) show Tailwind + Component patterns
+### Pricing display
+`plans/PlansCardsData.ts` stores each plan's **base** monthly price. `PlansCards.tsx` computes the
+displayed price at render time as a **25% discount** (`pricePlan * 0.75`) and shows the original
+struck through. Plans with `pricePlan: null` render `priceLabel` (e.g. "SOB CONSULTA") instead.
+Only the plan **name** string is sent to the API as `interest_plan`.
 
-### SEO & Metadata
-- All SEO configuration is done via Next.js `Metadata` API in the root layout
-- OG images and social sharing handled centrally
-- Sitemap and robots.txt in `public/`
+### Data colocation
+Static content lives in `*Data.ts` files next to the component that renders it — e.g.
+`FaqData.ts`, `TestimonialsPersonsData.ts`, `PlansCardsData.ts`, `footerData.ts`. Edit content
+there rather than inline in JSX.
 
-### Forms & External Services
-- Contact form integrates with Cal.com embed for scheduling
-- Forms likely post to an external API (check `src/services/api/apiConfig.ts` for endpoints)
-- Admin panel is under construction (check `src/app/(admin)/`)
+## Conventions & gotchas
 
-### Performance
-- Vercel Analytics and Speed Insights are integrated for monitoring
-- Images are optimized in `public/assets/` (primarily .webp format)
-- Custom fonts loaded from `public/assets/fonts/`
-
-## Common Workflows
-
-### Adding a New Page
-1. Create file in `src/app/(public)/[page-name]/page.tsx`
-2. Export a default component with your page content
-3. The root layout automatically applies Header, Footer, FAQ, and CTA sections
-4. Add metadata in the component if page-specific SEO is needed
-
-### Adding a New Section to Home
-1. Create component file in `src/app/components/public/home/[section-name]/`
-2. Import and add to `src/app/(public)/page.tsx`
-3. Follow the gap spacing pattern already in use (`gap-[128px] lg:gap-[256px]`)
-
-### Updating Components
-- Keep component files co-located with their sections
-- Data files (like `FaqData.ts`, `TestimonialsPersonsData.ts`) store content and can be easily updated
-- Use TypeScript types from `src/schemas/` and `src/services/types.ts` for form validation and API data
-
-## Linting & Code Quality
-
-- ESLint runs on all TypeScript and React files
-- Config extends `eslint-config-next/core-web-vitals` and `eslint-config-next/typescript`
-- Run `npm run lint:fix` to auto-fix issues before committing
-
-## Deployment
-
-- Deployed to Vercel (indicated by Speed Insights and Analytics integrations)
-- Environment variables likely managed via Vercel dashboard
-- Any API endpoints are checked in `src/services/api/apiConfig.ts`
+- **`src/shemas/` is misspelled** (should be "schemas") but the folder name and the import path
+  `@/shemas/validationSchema` are consistent across the code — do not "fix" it without updating
+  imports. It contains `validateEmail` / `validatePhone` / `validateOTP`.
+- Phone input uses `maskPhoneNumber` from `src/utils/masks.ts` (Brazilian `(NN) NNNNN-NNNN` format).
+- Path alias `@/*` maps to `src/*`.
+- Components that use hooks (`useSearchParams`, `useRouter`, `useState`) are `"use client"`;
+  section/data components are server components by default.
+- UI text is in Portuguese (pt-BR); keep new user-facing copy in Portuguese.
+- Home sections are spaced with the `gap-[128px] lg:gap-[256px]` pattern in `(public)/page.tsx` —
+  follow it when adding a new section.
+- Deployed on Vercel; environment variables (`NEXT_PUBLIC_*`) are managed in the Vercel dashboard.
