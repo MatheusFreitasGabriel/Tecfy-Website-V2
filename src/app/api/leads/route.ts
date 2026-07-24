@@ -1,6 +1,7 @@
 import { FieldValue } from "firebase-admin/firestore";
 import { adminDb } from "@/lib/firebaseAdmin";
 import { validateEmail, validatePhone } from "@/shemas/validationSchema";
+import { capitalizeName } from "@/utils/masks";
 
 export const runtime = "nodejs";
 
@@ -81,39 +82,77 @@ export async function POST(request: Request) {
       return Response.json({ error: "turnstile_failed" }, { status: 403 });
     }
 
-    const productionHostnames = ["tecfy.dev", "www.tecfy.dev"];
+    // Em produção só aceita os domínios reais; em dev, localhost também.
+    const allowedHostnames =
+      process.env.NODE_ENV === "production"
+        ? ["tecfy.dev", "www.tecfy.dev"]
+        : ["tecfy.dev", "www.tecfy.dev", "localhost", "127.0.0.1"];
+
     const isHostnameValid =
       turnstileResponse.hostname &&
-      productionHostnames.includes(turnstileResponse.hostname);
+      allowedHostnames.includes(turnstileResponse.hostname);
 
     const isActionValid = turnstileResponse.action === "contact_form_submit";
 
     if (!isHostnameValid || !isActionValid) {
+      console.error("Turnstile validation failed:", {
+        hostname: turnstileResponse.hostname,
+        action: turnstileResponse.action,
+        error_codes: turnstileResponse.error_codes,
+      });
       return Response.json({ error: "turnstile_failed" }, { status: 403 });
     }
 
     const normalizedEmail = lead_email.trim().toLowerCase();
 
     try {
-      await adminDb
-        .collection("leads")
-        .doc(normalizedEmail)
-        .create({
-          lead_name: trimmedName,
-          lead_email: lead_email.trim(),
+      const leadRef = adminDb.collection("leads").doc(); // uid aleatório
+      const counterRef = adminDb.collection("counters").doc("leads");
+
+      const result = await adminDb.runTransaction(async (tx) => {
+        // Firestore exige todas as leituras antes das escritas.
+
+        // 1. Bloqueia email duplicado.
+        const existing = await tx.get(
+          adminDb
+            .collection("leads")
+            .where("lead_email", "==", normalizedEmail)
+            .limit(1)
+        );
+        if (!existing.empty) {
+          return { duplicate: true as const };
+        }
+
+        // 2. id sequencial via contador atômico (1, 2, 3...).
+        const counterSnap = await tx.get(counterRef);
+        const current = (counterSnap.get("value") as number | undefined) ?? 0;
+        const nextId = current + 1;
+
+        // 3. Escritas.
+        tx.set(counterRef, { value: nextId }, { merge: true });
+        tx.set(leadRef, {
+          id: nextId,
+          id_linked_company: "1",
+          lead_name: capitalizeName(trimmedName),
+          lead_email: normalizedEmail,
           lead_phone,
           interest_plan: typeof interest_plan === "string" ? interest_plan.trim() : "",
+          lead_status: "not contacted",
+          origin: "website",
+          position: "new",
           created_at: FieldValue.serverTimestamp(),
-          source: "website_contact_form",
+          updated_at: FieldValue.serverTimestamp(),
         });
 
-      return Response.json({ ok: true }, { status: 201 });
-    } catch (error: unknown) {
-      const firebaseError = error as { code?: number };
-      if (firebaseError.code === 6) {
+        return { duplicate: false as const };
+      });
+
+      if (result.duplicate) {
         return Response.json({ error: "duplicate_lead" }, { status: 409 });
       }
 
+      return Response.json({ ok: true }, { status: 201 });
+    } catch (error: unknown) {
       console.error("Firestore write error:", error);
       return Response.json({ error: "internal_error" }, { status: 500 });
     }

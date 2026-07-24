@@ -115,11 +115,7 @@ export default function Form({ selectedPlan }: FormProps) {
             </p>
           </div>
         )}
-        <TurnstileWidget
-          ref={turnstileRef}
-          onTokenChange={setTurnstileToken}
-        />
-        <Input 
+        <Input
           id="nome"
           label="Nome completo"
           type="text"
@@ -147,8 +143,13 @@ export default function Form({ selectedPlan }: FormProps) {
           onChange={handlePhoneChange}
         />
 
+        <TurnstileWidget
+          ref={turnstileRef}
+          onTokenChange={setTurnstileToken}
+        />
+
         {/* 3. BOTÃO DINÂMICO */}
-        <button 
+        <button
           type="submit" 
           disabled={!isFormValid || isLoading} // Desabilita se a validação falhar
           className={`w-full h-12 md:h-[56px] uppercase font-semibold transition-all duration-300 ${

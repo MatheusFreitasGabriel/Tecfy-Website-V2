@@ -1,7 +1,12 @@
 "use client";
 
 import Script from "next/script";
-import { useEffect, useRef, useImperativeHandle, forwardRef } from "react";
+import {
+  useRef,
+  useCallback,
+  useImperativeHandle,
+  forwardRef,
+} from "react";
 
 declare global {
   interface Window {
@@ -36,8 +41,11 @@ const TurnstileWidget = forwardRef<TurnstileWidgetHandle, TurnstileWidgetProps>(
     const containerRef = useRef<HTMLDivElement>(null);
     const widgetIdRef = useRef<string | null>(null);
 
-    useEffect(() => {
+    const renderWidget = useCallback(() => {
+      // Só renderiza quando o script do Cloudflare já carregou e o container existe.
       if (!window.turnstile || !containerRef.current) return;
+      // Evita renderizar duas vezes (onLoad do Script + navegação com script em cache).
+      if (widgetIdRef.current !== null) return;
 
       widgetIdRef.current = window.turnstile.render(containerRef.current, {
         sitekey: process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY!,
@@ -69,6 +77,8 @@ const TurnstileWidget = forwardRef<TurnstileWidgetHandle, TurnstileWidgetProps>(
         <Script
           src="https://challenges.cloudflare.com/turnstile/v0/api.js"
           strategy="afterInteractive"
+          onLoad={renderWidget}
+          onReady={renderWidget}
         />
         <div ref={containerRef} className="flex justify-center md:justify-start" />
       </>
