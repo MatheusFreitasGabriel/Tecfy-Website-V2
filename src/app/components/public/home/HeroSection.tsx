@@ -1,10 +1,10 @@
 import Image from "next/image";
 import BtnCta from "../../ui/BtnCta";
 
-export default function HeroSection({id}: {id: string}) {
+export default function HeroSection({ id }: { id: string }) {
   return (
     <section id={id} className="relative h-screen w-full flex items-center justify-center bg-black scroll-mt-34">
-      
+
       {/* Imagem de fundo */}
       <Image
         className="absolute inset-0 w-full h-full object-cover object-top select-none pointer-events-none"
@@ -20,7 +20,10 @@ export default function HeroSection({id}: {id: string}) {
 
         {/* Agrupamento de conteudo textual */}
         <div className="flex flex-col gap-6 px-3 items-center">
-          <p className="uppercase text-center text-[14px] text-text-primary sm:text-[14px] lg:text-[16px] xl:text-[16px]">
+          <p
+            className="hero-fade uppercase text-center text-[14px] text-text-primary sm:text-[14px] lg:text-[16px] xl:text-[16px]"
+            style={{ animationDelay: "0.1s" }}
+          >
               Excelência na criação de <br className="hidden sm:block" />
               Websites, Aplicativos, Softwares e Inteligência Artificial.
           </p>
@@ -37,20 +40,26 @@ export default function HeroSection({id}: {id: string}) {
               mix-blend-difference
               uppercase
           ">
-              Tecnologia <br/>
-              Transforma <br/>
-              Futuro
+              <span className="hero-title-line" style={{ animationDelay: "0.3s" }}>Tecnologia</span>
+              <span className="hero-title-line" style={{ animationDelay: "0.45s" }}>Transforma</span>
+              <span className="hero-title-line" style={{ animationDelay: "0.6s" }}>Futuro</span>
           </h1>
-          <p className="text-center text-text-primary text-[14px] sm:text-[14px] lg:text-[16px] xl:text-[16px] uppercase">
+
+          <p
+            className="hero-fade text-center text-text-primary text-[14px] sm:text-[14px] lg:text-[16px] xl:text-[16px] uppercase"
+            style={{ animationDelay: "0.85s" }}
+          >
             Aqui as ideias se transformam em realidade com <br className="hidden sm:block" />
             qualidade, segurança, arquitetura e rapidez
           </p>
         </div>
 
         {/* Botão de redirecionamento para contato */}
-        <BtnCta/>
+        <div className="hero-fade" style={{ animationDelay: "1s" }}>
+          <BtnCta/>
+        </div>
       </div>
-      
+
     </section>
   );
 }

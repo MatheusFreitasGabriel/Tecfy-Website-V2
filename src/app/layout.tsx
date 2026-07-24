@@ -5,6 +5,7 @@ import Faq from "./components/public/global/faq/Faq";
 import Cta from "./components/public/global/Cta";
 import Footer from "./components/public/global/footer/Footer";
 import Header from "./components/public/global/Header";
+import CursorBlob from "./components/ui/CursorBlob";
 import { SpeedInsights } from "@vercel/speed-insights/next";
 import { Analytics } from "@vercel/analytics/next"
 
@@ -85,6 +86,8 @@ export default function RootLayout({
             gtag('config', 'G-JM2DKS9G1B');
           `}
         </Script>
+
+        <CursorBlob />
 
         <Header />
         <main>
