@@ -47,7 +47,6 @@ export const metadata: Metadata = {
     email: false,
     address: false,
     date: false,
-    time: false,
     url: false,
   },
   // Open Graph (Facebook/LinkedIn)
