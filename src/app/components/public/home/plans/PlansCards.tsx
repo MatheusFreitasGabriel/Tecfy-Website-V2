@@ -29,18 +29,13 @@ export default function PlansCards({ type }: Props) {
       <div className={containerClasses}>
         {filteredPlans.map((plan) => {
           const isHighlight = plan.highlightPlan;
-          const isDiscount = plan.discount;
           const cardBgClass = isHighlight
             ? "bg-gradient-to-b from-primary to-background-secondary"
             : "bg-background-secondary";
 
           const hasPrice = plan.pricePlan !== null;
-          
-          const oldPrice = hasPrice ? plan.pricePlan?.toFixed(2).replace('.', ',') : null;
 
-          const currentPriceWithDiscount = hasPrice 
-            ? ((plan.pricePlan ?? 0) * 0.75).toFixed(2).replace('.', ',') 
-            : null;
+          const displayPrice = hasPrice ? plan.pricePlan?.toFixed(2).replace('.', ',') : null;
 
           return (
             <div
@@ -53,29 +48,14 @@ export default function PlansCards({ type }: Props) {
                 {/* Card Header*/}
                 <div className="flex flex-col gap-3">
                   {/* Title Card */}
-                  <div className="flex flex-row gap-3.5 items-end">
-                    <h3 className="text-2xl font-bold">{plan.namePlan.toUpperCase()}</h3>
-                    {isDiscount && (
-                      <span className="text-[16px] text-secondary font-bold uppercase">(25% OFF)</span>
-                    )}
-                  </div>
+                  <h3 className="text-2xl font-bold">{plan.namePlan.toUpperCase()}</h3>
 
-                  {/* Price Card com Desconto */}
+                  {/* Price Card */}
                   {plan.pricePlan !== null ? (
-                    <div className="flex flex-col gap-1">
-                      {/* PREÇO ANTIGO RISCADO (Linha no meio) */}
-                      {oldPrice && (
-                        <span className="text-lg font-normal text-white/40 line-through decoration-white">
-                          R$ {oldPrice}
-                        </span>
-                      )}
-                      
-                      {/* PREÇO ATUAL */}
-                      <div className="flex gap-1 items-start">
-                        <span className="text-[16px] font-normal text-white/50">R$</span>
-                        <p className="text-4xl font-medium text-white">{currentPriceWithDiscount}</p>
-                        <span className="text-[16px] self-end font-normal text-white/50">/mês</span>
-                      </div>
+                    <div className="flex gap-1 items-start">
+                      <span className="text-[16px] font-normal text-white/50">R$</span>
+                      <p className="text-4xl font-medium text-white">{displayPrice}</p>
+                      <span className="text-[16px] self-end font-normal text-white/50">/mês</span>
                     </div>
                   ) : (
                     <p className="text-4xl font-normal text-white">{plan.priceLabel!}</p>
