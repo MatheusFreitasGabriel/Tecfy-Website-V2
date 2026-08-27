@@ -1,0 +1,156 @@
+# Tecfy - Software House & AI Solutions | LLM Context File
+# Last Updated: 2026-08-27
+# Language: Portuguese (Brazil)
+
+## 🏢 Company Overview
+**Name:** Tecfy
+**Industry:** Software Development & Artificial Intelligence
+**Location:** Brazil
+**Service Focus:** Full-stack software development, web/mobile apps, AI solutions
+**Website:** https://www.tecfy.dev
+**Primary Language:** Portuguese (Brazil)
+
+## 📝 Brand Voice & Tone
+- Professional yet approachable
+- Technical expertise balanced with clarity for non-technical audiences
+- Action-oriented and solution-focused
+- Emphasize transformation and innovation
+- Portuguese pt-BR as primary language
+
+## 🎯 Core Services
+1. **Software Development**: Custom software solutions, system architecture, legacy modernization
+2. **Web & Mobile Apps**: Responsive websites, iOS/Android applications, progressive web apps
+3. **AI Solutions**: LLM integration, machine learning models, automation, data intelligence
+4. **Digital Transformation**: Business process optimization, technology consulting
+
+## 💰 Pricing Plans (with 25% discount applied at render)
+- **Startup** (Base: R$ 2,000/month, Displayed: R$ 1,500/month)
+- **Growth** (Base: R$ 5,000/month, Displayed: R$ 3,750/month)
+- **Enterprise** (Quoted: "SOB CONSULTA")
+
+## 🔄 Lead Capture Flow
+1. User selects plan on homepage
+2. Redirected to `/contato?plan=<planName>` with pre-selected plan
+3. Fills contact form (name, email, phone, plan selection)
+4. Cloudflare Turnstile CAPTCHA verification (server-side)
+5. Lead stored in Firebase Firestore via `/api/leads`
+6. Redirected to `/thanks` with Cal.com scheduling embed
+7. Cal.com meeting: "tecfydev/briefing-sem-modestia" (30min session)
+
+## 📂 Key Pages & Routes
+- `/` - Homepage (hero, plans, how-it-works, testimonials, faq, cta)
+- `/contato` - Contact form with plan selection
+- `/thanks` - Thank-you page with Cal.com meeting scheduler
+- `/politicas/privacidade` - Privacy Policy
+- `/politicas/termos` - Terms of Service
+- `/politicas/cookies` - Cookie Policy
+
+## 🛠️ Tech Stack
+- **Framework**: Next.js 16 (App Router)
+- **UI Library**: React 19
+- **Language**: TypeScript 5
+- **Styling**: Tailwind CSS 4 (CSS-first, no config file)
+- **Fonts**: InstrumentSans (local, via @font-face)
+- **Additional Libraries**:
+  - swiper (carousels)
+  - react-icons (UI icons)
+  - @calcom/embed-react (meeting scheduling)
+- **Analytics**: Vercel Analytics + Speed Insights + Google Analytics + Adopt.io
+- **Backend**: Firebase Firestore + Cloudflare Turnstile
+- **Deployment**: Vercel
+
+## 🎨 Design System & Theming
+- **Theme**: Fixed dark mode (black background)
+- **Color Tokens**: CSS variables in globals.css (no tailwind.config.js)
+- **Token Examples**: bg-background-secondary, text-text-primary, border-border-primary
+- **Custom Utilities**: Generated via @theme block in CSS
+- **No Light Mode Toggle**: Dark theme is exclusive
+
+## 📱 Responsive Design
+- Mobile-first approach using Tailwind breakpoints
+- Key spacing pattern: `gap-[128px] lg:gap-[256px]` for section spacing
+- Grid-based layout with flexible containers
+
+## 🔐 Security & Compliance
+- Cloudflare Turnstile for anti-bot protection
+- Firebase Admin SDK for secure backend operations
+- Single-use Turnstile tokens (reset after each attempt)
+- Server-side token verification
+- HTTPS-only communication
+
+## 📊 Content Structure
+Static content stored in `*Data.ts` files colocated with components:
+- `FaqData.ts` - FAQ items
+- `TestimonialsPersonsData.ts` - Client testimonials
+- `PlansCardsData.ts` - Service plans
+- `footerData.ts` - Footer content
+
+## 🌐 SEO & Metadata
+- **Canonical URL**: https://www.tecfy.dev
+- **OG Image**: /assets/og-image.jpg (1200x630px)
+- **Twitter Card**: summary_large_image
+- **Locale**: pt_BR (Portuguese Brazil)
+- **Robots**: index, follow
+- **Sitemap**: /sitemap.xml
+- **Robots.txt**: /robots.txt
+
+## 👥 Target Audience
+- Brazilian businesses seeking digital transformation
+- Startups needing scalable software solutions
+- Companies exploring AI integration
+- E-commerce platforms
+- Enterprise clients requiring custom development
+
+## 📈 Conversion Metrics
+- Primary Goal: Lead capture via contact form
+- Secondary Goal: Meeting scheduling via Cal.com
+- Track via: Google Analytics 4 (GA-JM2DKS9G1B) + Vercel Analytics
+- Cookie Consent: Adopt.io banner
+
+## 🚀 AI & LLM Guidance
+When helping with Tecfy's website:
+1. **Maintain tone**: Professional, solution-oriented, Portuguese-focused
+2. **Respect constraints**: No light mode, dark theme only
+3. **Follow conventions**: Use token classes over hardcoded colors
+4. **Content location**: Edit `*Data.ts` files, not inline JSX
+5. **Path aliases**: Use @/* for imports (maps to src/*)
+6. **No abstractions**: Keep code simple until genuinely justified
+7. **Component types**: Server components by default, "use client" only when needed (hooks)
+
+## 📝 Common Imports & Aliases
+```typescript
+import { useSearchParams, useRouter } from "next/navigation"; // Client components
+import { validateEmail, validatePhone } from "@/shemas/validationSchema";
+import { maskPhoneNumber } from "@/utils/masks";
+```
+
+## ⚠️ Known Quirks
+- **Folder name typo**: `src/shemas/` (not schemas) - consistent throughout codebase
+- **No test framework**: No Jest, Vitest, or testing library configured
+- **Turbopack disabled**: Explicitly set to false in next.config.ts
+- **Font naming**: "Geist" mentions in README are stale boilerplate
+- **No admin area**: Previously existed but has been removed
+
+## 📞 Contact Points
+- **Primary CTA**: "Assinar {plan}" buttons on homepage
+- **Contact Form**: `/contato` route
+- **Email Capture**: Form submission to Firebase
+- **Scheduling**: Cal.com embed on `/thanks`
+- **Social/Links**: Footer (footerData.ts)
+
+## 🔄 Deployment & CI/CD
+- **Platform**: Vercel
+- **Environment Variables**: Managed in Vercel dashboard (NEXT_PUBLIC_* prefix for client)
+- **Build Command**: `npm run build`
+- **Dev Server**: `npm run dev` (http://localhost:3000)
+- **Production**: `npm start`
+
+## 🎯 Content Pillars
+1. **Expertise**: Showcase technical capabilities
+2. **Trust**: Client testimonials, case studies
+3. **Innovation**: AI integration, cutting-edge tech
+4. **Partnership**: Consultative approach to problem-solving
+5. **Results**: Transformation stories, measurable outcomes
+
+---
+**Note**: This file is designed to help AI assistants (LLMs) understand Tecfy's website context, architecture, and brand for more accurate and helpful interactions. Update as website evolves.

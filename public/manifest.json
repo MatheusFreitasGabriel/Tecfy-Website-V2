@@ -1,0 +1,83 @@
+{
+  "name": "Tecfy - Software House & Soluções em IA",
+  "short_name": "Tecfy",
+  "description": "Especialistas em desenvolvimento de Software, Apps, Sites e Inteligência Artificial. Transformamos ideias em soluções digitais completas.",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "orientation": "portrait-primary",
+  "theme_color": "#000000",
+  "background_color": "#000000",
+  "lang": "pt-BR",
+  "dir": "ltr",
+  "categories": ["technology", "business", "productivity"],
+  "prefer_related_applications": false,
+  "screenshots": [
+    {
+      "src": "web-app-manifest-192x192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "web-app-manifest-512x512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "web-app-manifest-512x512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
+    }
+  ],
+  "icons": [
+    {
+      "src": "web-app-manifest-192x192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "web-app-manifest-512x512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "web-app-manifest-512x512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
+    }
+  ],
+  "shortcuts": [
+    {
+      "name": "Agendar Reunião",
+      "short_name": "Agendar",
+      "description": "Agende uma reunião com os especialistas da Tecfy",
+      "url": "/thanks?from=shortcut",
+      "icons": [
+        {
+          "src": "web-app-manifest-192x192.png",
+          "sizes": "192x192",
+          "type": "image/png"
+        }
+      ]
+    },
+    {
+      "name": "Planos e Preços",
+      "short_name": "Planos",
+      "description": "Conheça os planos de serviço da Tecfy",
+      "url": "/#plans",
+      "icons": [
+        {
+          "src": "web-app-manifest-192x192.png",
+          "sizes": "192x192",
+          "type": "image/png"
+        }
+      ]
+    }
+  ]
+}

@@ -1,3 +1,46 @@
+# Robots.txt for Tecfy.dev
+# Last Updated: 2026-08-27
+
+# Default rules for all bots
 User-agent: *
 Allow: /
+Disallow: /api/
+Disallow: /*.json
+Disallow: /admin/
+Disallow: /.env
+Disallow: /private/
+
+# Crawl delay for respectful crawling (in seconds)
+Crawl-delay: 1
+
+# Request rate (requests per hour)
+Request-rate: 30/1h
+
+# Specific rules for Google
+User-agent: Googlebot
+Allow: /
+Crawl-delay: 0
+Request-rate: unlimited/1h
+
+# Specific rules for Bing
+User-agent: Bingbot
+Allow: /
+Crawl-delay: 1
+Request-rate: 30/1h
+
+# Block low-quality bots
+User-agent: AhrefsBot
+Disallow: /
+
+User-agent: SemrushBot
+Disallow: /
+
+User-agent: DotBot
+Disallow: /
+
+# Sitemap locations
 Sitemap: https://www.tecfy.dev/sitemap.xml
+Sitemap: https://www.tecfy.dev/geo.xml
+
+# Comment: This file helps search engines understand how to crawl Tecfy.dev
+# Last updated: 2026-08-27 | Language: Portuguese (Brazil)
