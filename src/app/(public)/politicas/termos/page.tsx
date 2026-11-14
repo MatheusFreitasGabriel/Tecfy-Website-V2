@@ -16,7 +16,7 @@ const PoliticasTermos = () => {
   };
 
   return (
-    <main className="w-full flex flex-col items-center gap-6">
+    <article className="w-full flex flex-col items-center gap-6">
       <header className="w-full max-w-[1440px] px-6 mx-auto flex flex-col gap-3">
         <h1 className="text-2xl md:text-4xl font-medium text-white leading-tight">
           {titleSection}
@@ -72,7 +72,7 @@ const PoliticasTermos = () => {
           </section>
         ))}
       </article>
-    </main>
+    </article>
   );
 };
 

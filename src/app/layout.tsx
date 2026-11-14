@@ -1,13 +1,6 @@
 import type { Metadata, Viewport } from "next";
 import Script from "next/script";
 import "../styles/globals.css";
-import Faq from "./components/public/global/faq/Faq";
-import Cta from "./components/public/global/Cta";
-import Footer from "./components/public/global/footer/Footer";
-import Header from "./components/public/global/Header";
-import CursorBlob from "./components/ui/CursorBlob";
-import { SpeedInsights } from "@vercel/speed-insights/next";
-import { Analytics } from "@vercel/analytics/next"
 
 // 1. Configuração de Viewport (Padrão Next.js 14+)
 export const viewport: Viewport = {
@@ -116,12 +109,7 @@ export default function RootLayout({
                 "url": "https://www.tecfy.dev",
                 "name": "Tecfy",
                 "inLanguage": "pt-BR",
-                "publisher": {"@id": "https://www.tecfy.dev/#organization"},
-                "potentialAction": {
-                  "@type": "SearchAction",
-                  "target": "https://www.tecfy.dev/search?q={search_term_string}",
-                  "query-input": "required name=search_term_string"
-                }
+                "publisher": {"@id": "https://www.tecfy.dev/#organization"}
               },
               {
                 "@type": "LocalBusiness",
@@ -142,40 +130,8 @@ export default function RootLayout({
           }`}
         </Script>
       </head>
-      <body className="antialiased">
-        {/* 3. Scripts de Terceiros (Google Analytics & Adopt) */}
-        
-        {/* Adopt - Cookie Banner */}
-        <Script
-          src="https://tag.goadopt.io/injector.js?website_code=88b861e3-5ff3-4a6c-be05-82a2a90163f3"
-          strategy="afterInteractive"
-          className="adopt-injector"
-        />
-
-        {/* Google Analytics */}
-        <Script
-          src="https://www.googletagmanager.com/gtag/js?id=G-JM2DKS9G1B"
-          strategy="afterInteractive"
-        />
-        <Script id="google-analytics" strategy="afterInteractive">
-          {`
-            window.dataLayer = window.dataLayer || [];
-            function gtag(){dataLayer.push(arguments);}
-            gtag('js', new Date());
-            gtag('config', 'G-JM2DKS9G1B');
-          `}
-        </Script>
-
-        <CursorBlob />
-
-        <Header />
-        <main>
-          {children}
-          <Faq />
-          <Cta />
-        </main>
-        <Footer />
-      </body>
+      {/* Header, Footer, FAQ, CTA e scripts de terceiros (GA/Adopt) ficam em (public)/layout.tsx */}
+      <body className="antialiased">{children}</body>
     </html>
   );
 }

@@ -5,7 +5,7 @@ import Plans from "../components/public/home/plans/Plans";
 import Testimonials from "../components/public/home/testimonials/Testimonials";
 
 export default function Page() {
-  return <main className="flex flex-col gap-[64px] lg:gap-[128px]">
+  return <div className="flex flex-col gap-[64px] lg:gap-[128px]">
 
     {/*Hero Section*/}
     <HeroSection id="hero"/>
@@ -21,5 +21,5 @@ export default function Page() {
 
     {/* Plans and Prices Section */}
     <Plans id="prices"/>
-  </main>
+  </div>
 }

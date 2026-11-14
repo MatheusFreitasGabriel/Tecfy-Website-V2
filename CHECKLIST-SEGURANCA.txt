@@ -1,0 +1,101 @@
+===========================================================================
+ CHECKLIST DE SEGURANÇA — PAINEL ADMIN (TECFY)
+ Criado em 14/11/2026 · Branch: admin-development
+===========================================================================
+
+Já feito no código (não precisa mexer):
+  [x] Next.js atualizado para 16.4.6 (0 vulnerabilidades no npm audit)
+  [x] Turnstile antes de qualquer gravação no Firestore (bots não geram custo)
+  [x] Bloqueio por email+IP (5 erros/15 min) + bloqueio global do email (30 erros/1 h)
+  [x] Janela de 30 min para cadastrar 2FA (só liberada por comando)
+  [x] "Portão" secreto no proxy (bypass de URL dá 404)
+  [x] Sessão presa ao navegador (cookie roubado não funciona em outra máquina)
+  [x] Cookie temporário do login preso ao IP + navegador
+  [x] Origem das requisições conferida contra lista fixa
+  [x] Headers de segurança no site inteiro
+  [x] Alertas por webhook (falta só configurar a URL — item 7)
+
+IMPORTANTE: a sessão antiga deixou de valer — faça login de novo no painel.
+
+---------------------------------------------------------------------------
+ O QUE FALTA FAZER (em ordem de importância)
+---------------------------------------------------------------------------
+
+[ ] 1. [CRÍTICO] Credenciais fora do OneDrive
+      - Apagar o JSON da chave da service account da pasta Downloads
+        e esvaziar a lixeira.
+      - Mover o projeto para fora do OneDrive (ex.: C:\dev\Tecfy-Website-V2),
+        porque o .env.local tem a chave de PRODUÇÃO e o OneDrive sincroniza
+        com a nuvem.
+      - Depois de mover: revogar a chave atual no Google Cloud
+        (IAM e administrador → Contas de serviço → firebase-adminsdk → Chaves)
+        e gerar uma nova, salvando fora do OneDrive. Atualizar .env.local.
+      - Ideal (médio prazo): projeto Firebase separado só para desenvolvimento.
+
+[ ] 2. [CRÍTICO] Verificação em 2 etapas (app autenticador ou chave física) em:
+      [ ] Google (conta dona do Firebase / Google Cloud)
+      [ ] Vercel
+      [ ] GitHub  (+ branch protection na main + revisar quem tem acesso)
+      [ ] Cloudflare
+      [ ] Hotmail (email do admin — dá para resetar senha do Firebase por ele)
+
+[ ] 3. [ALTO] API key restrita para o login do painel
+      - Google Cloud Console → APIs e serviços → Credenciais → Criar chave de API.
+      - Restringir a chave: "Restrições de API" → só "Identity Toolkit API".
+      - Colocar a chave nova em FIREBASE_WEB_API_KEY (.env.local e Vercel).
+      - Se a chave antiga (firebaseConfig web) for usada em algum app,
+        restringir ela por referrer (HTTP) aos domínios desse app.
+
+[ ] 4. [ALTO] Firewall da Vercel
+      - Projeto → Firewall → nova regra de Rate Limit para o caminho
+        /<slug-do-painel>/api/*  (ex.: 20 requisições por minuto por IP).
+
+[ ] 5. [MÉDIO] Variáveis do painel só em Production na Vercel
+      - ADMIN_PATH, ADMIN_PENDING_SECRET, FIREBASE_WEB_API_KEY → só "Production".
+      - Settings → Deployment Protection → ligar para os deploys de Preview.
+      - Lembrar de cadastrar na Vercel TODAS as variáveis do .env.example
+        antes de fazer o deploy do painel (e gerar um ADMIN_PENDING_SECRET
+        novo para produção, diferente do local).
+
+[ ] 6. [MÉDIO] Limpeza automática no Firestore (TTL)
+      - Firestore → TTL → criar política no campo "expires_at" para:
+        [ ] admin_rate_limits
+        [ ] admin_sessions
+      - Definir retenção dos logs de admin_login_logs (sugestão: 1 ano, LGPD).
+
+[ ] 7. [OPCIONAL] Alertas em tempo real
+      - Criar um webhook no Discord (Canal → Editar → Integrações → Webhooks)
+        ou no Slack.
+      - Colocar a URL em ADMIN_ALERT_WEBHOOK_URL (.env.local e Vercel).
+
+[ ] 8. [VERIFICAR NO 1º LOGIN EM PRODUÇÃO]
+      - Conferir em admin_login_logs se o "ip" é o seu IP real.
+        Se aparecer um IP da Cloudflare, avisar: precisa ajustar o código
+        (site atrás do proxy laranja da Cloudflare).
+      - Conferir se o "geo" (cidade/estado/país) foi preenchido.
+
+[ ] 9. [BAIXO] Rotacionar o secret do widget "localhost" do Turnstile
+      (foi colado no chat). Cloudflare → Turnstile → widget → Rotate secret.
+
+---------------------------------------------------------------------------
+ TESTES MANUAIS PENDENTES
+---------------------------------------------------------------------------
+
+[ ] Sessão presa ao navegador: logar, trocar o user-agent no DevTools
+    (Network conditions → User agent), recarregar → deve voltar para o
+    login e aparecer "session_anomaly" no Firestore.
+[ ] Janela do 2FA: criar usuário de teste, rodar `grant`, esperar 30 min
+    sem cadastrar e tentar entrar → "Email ou senha inválidos" e
+    reason "enroll_not_allowed" no log.
+
+---------------------------------------------------------------------------
+ COMANDOS ÚTEIS (rodar na raiz do projeto)
+---------------------------------------------------------------------------
+
+  node --env-file=.env.local scripts/admin-setup.mjs status <email>
+  node --env-file=.env.local scripts/admin-setup.mjs grant <email>
+  node --env-file=.env.local scripts/admin-setup.mjs allow-enroll <email>
+  node --env-file=.env.local scripts/admin-setup.mjs reset-2fa <email>
+  node --env-file=.env.local scripts/admin-setup.mjs revoke <email>
+
+Próximo passo do projeto: tela do sistema (aguardando a imagem/layout).

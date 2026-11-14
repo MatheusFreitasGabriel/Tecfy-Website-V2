@@ -34,10 +34,12 @@ export interface TurnstileWidgetHandle {
 
 type TurnstileWidgetProps = {
   onTokenChange: (token: string | null) => void;
+  /** Action validada no servidor (cada formulário usa a sua). */
+  action?: string;
 };
 
 const TurnstileWidget = forwardRef<TurnstileWidgetHandle, TurnstileWidgetProps>(
-  ({ onTokenChange }, ref) => {
+  ({ onTokenChange, action = "contact_form_submit" }, ref) => {
     const containerRef = useRef<HTMLDivElement>(null);
     const widgetIdRef = useRef<string | null>(null);
 
@@ -50,7 +52,7 @@ const TurnstileWidget = forwardRef<TurnstileWidgetHandle, TurnstileWidgetProps>(
       widgetIdRef.current = window.turnstile.render(containerRef.current, {
         sitekey: process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY!,
         theme: "dark",
-        action: "contact_form_submit",
+        action,
         callback: (token: string) => {
           onTokenChange(token);
         },
@@ -61,7 +63,7 @@ const TurnstileWidget = forwardRef<TurnstileWidgetHandle, TurnstileWidgetProps>(
           onTokenChange(null);
         },
       });
-    }, [onTokenChange]);
+    }, [onTokenChange, action]);
 
     useImperativeHandle(ref, () => ({
       reset: () => {

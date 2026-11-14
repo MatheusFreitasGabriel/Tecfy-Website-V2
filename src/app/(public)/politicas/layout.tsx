@@ -129,7 +129,7 @@ export default function PoliticasLayout({
               </div>
               {navContent}
             </aside>
-            <main className="min-w-0">{children}</main>
+            <div className="min-w-0">{children}</div>
           </div>
         </div>
       </div>

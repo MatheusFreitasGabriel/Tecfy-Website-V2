@@ -1,17 +1,11 @@
 import { FieldValue } from "firebase-admin/firestore";
-import { adminDb } from "@/lib/firebaseAdmin";
+import { getAdminDb } from "@/lib/firebaseAdmin";
 import { validateEmail, validatePhone } from "@/shemas/validationSchema";
 import { capitalizeName } from "@/utils/masks";
+import { verifyTurnstile } from "@/lib/turnstile";
 
 export const runtime = "nodejs";
 
-interface TurnstileResponse {
-  success: boolean;
-  challenge_ts?: string;
-  hostname?: string;
-  action?: string;
-  error_codes?: string[];
-}
 
 // Rate limiting em memória
 const rateLimitMap = new Map<string, number[]>();
@@ -109,57 +103,7 @@ export async function POST(request: Request) {
     }
 
     // 6. Verificar Turnstile
-    const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 10000);
-
-    let turnstileResponse: TurnstileResponse;
-    try {
-      const response = await fetch(
-        "https://challenges.cloudflare.com/turnstile/v0/siteverify",
-        {
-          method: "POST",
-          headers: { "Content-Type": "application/x-www-form-urlencoded" },
-          body: new URLSearchParams({
-            secret: process.env.TURNSTILE_SECRET_KEY!,
-            response: turnstile_token,
-            remoteip: clientIp,
-          }).toString(),
-          signal: controller.signal,
-        }
-      );
-      clearTimeout(timeoutId);
-
-      if (!response.ok) {
-        return Response.json({ error: "turnstile_failed" }, { status: 403 });
-      }
-
-      turnstileResponse = await response.json();
-    } catch (error) {
-      clearTimeout(timeoutId);
-      return Response.json({ error: "turnstile_failed" }, { status: 403 });
-    }
-
-    if (!turnstileResponse.success) {
-      return Response.json({ error: "turnstile_failed" }, { status: 403 });
-    }
-
-    // 7. Validar hostname e action do Turnstile
-    const allowedHostnames =
-      process.env.NODE_ENV === "production"
-        ? ["tecfy.dev", "www.tecfy.dev"]
-        : ["tecfy.dev", "www.tecfy.dev", "localhost", "127.0.0.1"];
-
-    const isHostnameValid =
-      turnstileResponse.hostname &&
-      allowedHostnames.includes(turnstileResponse.hostname);
-
-    const isActionValid = turnstileResponse.action === "contact_form_submit";
-
-    if (!isHostnameValid || !isActionValid) {
-      console.error("Turnstile validation failed", {
-        hostname: turnstileResponse.hostname,
-        action: turnstileResponse.action,
-      });
+    if (!(await verifyTurnstile(turnstile_token, clientIp, "contact_form_submit"))) {
       return Response.json({ error: "turnstile_failed" }, { status: 403 });
     }
 
@@ -167,6 +111,7 @@ export async function POST(request: Request) {
     const normalizedEmail = lead_email.trim().toLowerCase();
 
     try {
+      const adminDb = getAdminDb();
       const leadRef = adminDb.collection("leads").doc();
 
       const result = await adminDb.runTransaction(async (tx) => {
@@ -201,11 +146,11 @@ export async function POST(request: Request) {
       }
 
       return Response.json({ ok: true }, { status: 201 });
-    } catch (error: unknown) {
+    } catch {
       console.error("Firestore write error");
       return Response.json({ error: "internal_error" }, { status: 500 });
     }
-  } catch (error) {
+  } catch {
     console.error("Route handler error");
     return Response.json({ error: "internal_error" }, { status: 500 });
   }

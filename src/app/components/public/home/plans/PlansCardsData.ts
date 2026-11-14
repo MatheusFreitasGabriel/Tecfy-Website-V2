@@ -1,5 +1,5 @@
 import { IconType } from "react-icons";
-import { FaBan, FaBezierCurve, FaChartBar, FaClock, FaCode, FaGlobe, FaHandshake, FaHeadset, FaLayerGroup, FaRocket, FaScrewdriver, FaSearchengin, FaWhatsapp } from "react-icons/fa";
+import { FaBan, FaBezierCurve, FaChartBar, FaClock, FaCode, FaGlobe, FaHandshake, FaHeadset, FaLayerGroup, FaRocket, FaSearchengin, FaWhatsapp } from "react-icons/fa";
 import { FaArrowLeft, FaFileLines, FaGear, FaMoneyCheckDollar, FaScrewdriverWrench } from "react-icons/fa6";
 
 {/* Tipos de planos */}

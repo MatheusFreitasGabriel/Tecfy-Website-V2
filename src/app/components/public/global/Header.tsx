@@ -68,7 +68,7 @@ export default function Header() {
             className="hover:opacity-80 transition-opacity"
           >
             <Image
-              src="assets/visual-identity/logo-tecfy.svg"
+              src="/assets/visual-identity/logo-tecfy.svg"
               alt="Tecfy Logo"
               width={91}
               height={24}
