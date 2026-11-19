@@ -109,22 +109,26 @@ export async function guardAdminRequest(request: Request): Promise<Response | nu
 }
 
 /**
- * Validações comuns dos POSTs do painel: gate, origem, JSON e corpo pequeno.
+ * Validações comuns dos POSTs do painel: gate, origem, JSON e corpo pequeno
+ * (2 KB por padrão; cadastros do CRM passam um limite maior em `maxBytes`).
  * Tudo aqui é barato (sem rede/banco). Retorna o objeto JSON ou uma Response de erro.
  */
-export async function readGuardedJson(request: Request): Promise<Record<string, unknown> | Response> {
+export async function readGuardedJson(
+  request: Request,
+  maxBytes: number = MAX_BODY_BYTES,
+): Promise<Record<string, unknown> | Response> {
   const blocked = await guardAdminRequest(request);
   if (blocked) return blocked;
   if (!request.headers.get("content-type")?.toLowerCase().startsWith("application/json")) {
     return Response.json({ error: "invalid_input" }, { status: 415 });
   }
   const length = Number(request.headers.get("content-length") ?? "NaN");
-  if (!Number.isFinite(length) || length > MAX_BODY_BYTES) {
+  if (!Number.isFinite(length) || length > maxBytes) {
     return Response.json({ error: "invalid_input" }, { status: 413 });
   }
   try {
     const text = await request.text();
-    if (text.length > MAX_BODY_BYTES) return Response.json({ error: "invalid_input" }, { status: 413 });
+    if (text.length > maxBytes) return Response.json({ error: "invalid_input" }, { status: 413 });
     const data: unknown = JSON.parse(text);
     if (!data || typeof data !== "object" || Array.isArray(data)) {
       return Response.json({ error: "invalid_input" }, { status: 400 });

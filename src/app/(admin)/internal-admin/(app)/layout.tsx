@@ -1,6 +1,7 @@
 import { redirect } from "next/navigation";
+import Sidebar from "@/app/components/admin/sidebar/Sidebar";
 import { getAdminBasePath } from "@/lib/adminPath";
-import { getAdminSession } from "@/lib/admin/session";
+import { getAdminProfile, getAdminSession } from "@/lib/admin/session";
 
 /**
  * Área protegida do painel. Toda página aqui dentro exige sessão válida:
@@ -8,7 +9,15 @@ import { getAdminSession } from "@/lib/admin/session";
  */
 export default async function AdminAppLayout({ children }: Readonly<{ children: React.ReactNode }>) {
   const session = await getAdminSession();
-  if (!session) redirect(`${getAdminBasePath() ?? ""}/login`);
+  const basePath = getAdminBasePath() ?? "";
+  if (!session) redirect(`${basePath}/login`);
 
-  return <>{children}</>;
+  const profile = await getAdminProfile(session);
+
+  return (
+    <div className="flex min-h-screen w-full bg-background">
+      <Sidebar basePath={basePath} email={profile.email} name={profile.name} picture={profile.picture} />
+      <div className="min-w-0 flex-1">{children}</div>
+    </div>
+  );
 }

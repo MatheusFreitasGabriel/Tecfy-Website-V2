@@ -1,0 +1,58 @@
+"use client";
+
+import { useRef } from "react";
+import { createPortal } from "react-dom";
+import { FaXmark } from "react-icons/fa6";
+import { useModalBehavior } from "./useModalBehavior";
+
+interface DrawerProps {
+  title: string;
+  /** Texto pequeno acima do título (ex.: "Detalhes do lead"). */
+  eyebrow?: string;
+  onClose: () => void;
+  footer?: React.ReactNode;
+  children: React.ReactNode;
+  /** Largura máxima (classe Tailwind). */
+  widthClass?: string;
+}
+
+/** Painel lateral direito (filtros, detalhes...). Esc/X/clique fora fecham; foco preso; empilhável. */
+export default function Drawer({ title, eyebrow, onClose, footer, children, widthClass = "max-w-[520px]" }: DrawerProps) {
+  const panelRef = useRef<HTMLElement>(null);
+  const id = useModalBehavior(panelRef, onClose);
+
+  return createPortal(
+    <div className="admin-modal-overlay fixed inset-0 z-50 flex justify-end bg-black/60" onMouseDown={(e) => e.target === e.currentTarget && onClose()}>
+      <aside
+        ref={panelRef}
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby={`${id}-title`}
+        tabIndex={-1}
+        className={`admin-drawer-panel flex h-full w-full ${widthClass} flex-col bg-background-kpi outline outline-1 -outline-offset-1 outline-admin-drawer-border focus:outline-admin-drawer-border`}
+      >
+        <header className="flex min-h-20 shrink-0 items-center justify-between gap-4 border-b border-admin-table-border px-7 py-4">
+          <div className="min-w-0">
+            {eyebrow && <p className="text-xs font-medium text-admin-drawer-muted">{eyebrow}</p>}
+            <h2 id={`${id}-title`} className="truncate text-lg font-semibold leading-6 text-text-primary">
+              {title}
+            </h2>
+          </div>
+          <button
+            type="button"
+            onClick={onClose}
+            aria-label="Fechar"
+            className="flex h-11 w-11 shrink-0 items-center justify-center rounded-[10px] bg-admin-drawer-card text-text-primary outline outline-1 -outline-offset-1 outline-admin-control-disabled-border hover:bg-admin-badge"
+          >
+            <FaXmark aria-hidden className="h-5 w-5" />
+          </button>
+        </header>
+        <div data-modal-body className="min-h-0 flex-1 overflow-y-auto px-7 py-6">
+          {children}
+        </div>
+        {footer && <footer className="shrink-0 border-t border-admin-divider px-7 py-5">{footer}</footer>}
+      </aside>
+    </div>,
+    document.body,
+  );
+}

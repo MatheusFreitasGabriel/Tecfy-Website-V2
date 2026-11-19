@@ -131,7 +131,39 @@ against Cloudflare, and writes to Firestore via `getAdminDb()` from `src/lib/fir
 (lazy init — call it inside the request handler, never at module top level, or `next build`
 breaks when Firebase env vars are absent).
 Turnstile is verified server-side; the token is single-use and must be reset after each submit
-attempt.
+attempt. Each submission creates a **contact** (`contacts`) plus a **lead** (`leads`, `schema_version: 2`,
+`entry: "website"`) linked to it. A known e-mail is **not** rejected anymore: the return is logged as a
+system note on that contact's latest lead + a `lead_returned` notification/e-mail (the API no longer returns 409;
+the 409 branch in `Form.tsx` is now unused).
+
+### Admin CRM (Firestore)
+- Model in `src/lib/admin/crm/types.ts`: `leads` (an opportunity; `entry` = `manual`|`website`, set
+  server-side only), `contacts`, `companies`, `contracts`, `products`. Select options (stage, source…)
+  live in `src/lib/admin/crm/options.ts`; shared client/server validation in `crm/validation.ts`.
+- Manual lead creation: `CreateLeadModal` → `POST ${basePath}/api/crm/leads` (gate + session) →
+  `createManualLead()` writes company → contact → lead in one transaction.
+- Leads list (`LeadsView`): search/filters/sort/pagination run client-side over `listLeads()` (≤2000).
+  Row and bulk actions go to `POST ${basePath}/api/crm/leads/bulk` (`set_qualification|set_stage|
+  set_status|convert|delete`, ≤200 ids). `convert` creates a minimal `deals/{id}` and marks the lead
+  (`deal_id`, `converted_at`); `delete` removes only the lead, never its contact/company.
+- Lead filtering/sorting/chips live in `leads/leadFilters.ts` (pure); filter drawer = `LeadsFilterDrawer`.
+- Leads carry their own `email`/`phone` (quick contact) besides the linked contact. WhatsApp opens
+  `wa.me` with a filled template (`crm/templates.ts`); e-mail is sent server-side via Resend
+  (`crm/email.ts`, envs `RESEND_API_KEY` + `CRM_EMAIL_FROM`) at `POST …/api/crm/leads/[id]/email` —
+  the recipient must be the lead's or its contact's e-mail. History in `leads/{id}/emails`.
+- Lead details are read-only by design (no editing of saved data). Notes are an append-only timeline in
+  `leads/{id}/notes` (author + server time), via `GET/POST …/api/crm/leads/[id]/notes` (`crm/notes.ts`).
+- New website lead → `/api/leads` writes an `admin_notifications` doc in the same transaction (bell in the
+  sidebar, `NotificationBell`, polls `GET …/api/notifications` every 60 s; per-user `read_by`) and, via
+  `after()`, `notifyNewWebsiteLead()` e-mails `LEAD_NOTIFY_EMAIL` (default contato@tecfy.dev) with the
+  phone + WhatsApp link, plus the optional Discord/Slack webhook. The panel URL is never put in e-mails.
+- Owner assignment = bulk action `set_owner` (also in the details drawer); linking a contact/company to a lead
+  that has none = `POST …/api/crm/leads/[id]/links` (never replaces an existing link). Both write a
+  `kind: "system"` note to the lead timeline.
+- Message templates: built-ins in code (`BUILTIN_TEMPLATES`, read-only) + custom ones in
+  `message_templates` (`POST …/api/crm/templates`).
+- `scripts/crm-setup.mjs migrate-leads [--apply]` converts pre-v2 website leads (dry-run by default).
+- Don't seed or edit `products` — the user manages that.
 
 ### Theming (Tailwind v4, CSS-first)
 There is **no `tailwind.config.js`**. All design tokens are CSS variables defined in

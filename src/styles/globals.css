@@ -40,6 +40,72 @@
   --border-input: #353535;
   --border-card: #252525;
 
+  /* Painel admin */
+  --background-surface: #151515;
+  --text-muted: #C2C2C2;
+  --text-disabled: #4D4D4D;
+  --background-kpi: #141414;
+  --text-kpi-label: #828282;
+  --illustration-1: #272727;
+  --illustration-2: #323232;
+  --illustration-3: #383838;
+  --illustration-stroke: #676767;
+
+  /* Painel admin: CRM (telas, modais e formulários) */
+  --admin-primary: #3901FB;
+  --admin-primary-hover: #4C1CFF;
+  --admin-accent: #C3ACFF;
+  --admin-badge: #202020;
+  --admin-badge-text: #D6D6D6;
+  --admin-text-description: #A3A3A3;
+  --admin-text-label: #BDBDBD;
+  --admin-text-hint: #999999;
+  --admin-text-input: #F3F3F3;
+  --admin-input: #0D0D0D;
+  --admin-input-border: #3B3B3B;
+  --admin-picker: #101010;
+  --admin-picker-border: #3C3C3C;
+  --admin-card: #1B1B1B;
+  --admin-card-border: #333333;
+  --admin-button-border: #424242;
+  --admin-divider: #303030;
+  --admin-tip: #211A2D;
+  --admin-tip-title: #D2BFFF;
+  --admin-tip-text: #B4A7CB;
+  --admin-danger: #F87171;
+  --admin-success: #4ADE80;
+  --admin-danger-strong: #DC2626;
+  --admin-danger-strong-hover: #EF4444;
+
+  /* Painel admin: lista de leads e painel de detalhes */
+  --admin-table: #0C0C0C;
+  --admin-table-alt: #101010;
+  --admin-table-head: #181818;
+  --admin-table-head-text: #AEAEAE;
+  --admin-table-border: #2C2C2C;
+  --admin-table-divider: #242424;
+  --admin-table-subtext: #9B9B9B;
+  --admin-table-date: #B8B8B8;
+  --admin-control: #151515;
+  --admin-control-border: #454545;
+  --admin-control-disabled-border: #4D4D4D;
+  --admin-drawer-border: #343434;
+  --admin-drawer-card: #1C1C1C;
+  --admin-drawer-muted: #B0B0B0;
+  --admin-drawer-value: #EFEFEF;
+  --admin-drawer-notes: #CCCCCC;
+  --admin-qual-hot: #332217;
+  --admin-qual-hot-text: #FFAB6B;
+  --admin-qual-warm: #281B3D;
+  --admin-qual-warm-text: #D5B9FF;
+  --admin-qual-cold: #18263C;
+  --admin-qual-cold-text: #91BAFF;
+  --admin-qual-sure: #12301F;
+  --admin-qual-sure-text: #6EE7A0;
+  --admin-tooltip: #F4F4F5;
+  --admin-tooltip-text: #111111;
+  --admin-whatsapp: #25D366;
+
   /* Cores de texto */
   --text-primary: #ffffff;
   --text-secondary: #B3B3B3;
@@ -51,11 +117,35 @@
   --font-regular: 400;
 }
 
+/* Painel admin: entrada do modal de pesquisa */
+@keyframes admin-search-fade { from { opacity: 0; } }
+@keyframes admin-search-pop { from { opacity: 0; transform: translateY(-8px) scale(0.98); } }
+.admin-search-overlay { animation: admin-search-fade 150ms ease-out; }
+.admin-search-panel { animation: admin-search-pop 180ms ease-out; }
+@media (prefers-reduced-motion: reduce) {
+  .admin-search-overlay, .admin-search-panel { animation: none; }
+}
+
+/* Painel admin: entrada dos modais de cadastro */
+.admin-modal-overlay { animation: admin-search-fade 150ms ease-out; }
+.admin-modal-panel { animation: admin-search-pop 180ms ease-out; }
+@media (prefers-reduced-motion: reduce) {
+  .admin-modal-overlay, .admin-modal-panel { animation: none; }
+}
+
+/* Painel admin: painel lateral (detalhes do lead) entra pela direita */
+@keyframes admin-drawer-in { from { transform: translateX(100%); } }
+.admin-drawer-panel { animation: admin-drawer-in 220ms cubic-bezier(0.2, 0.8, 0.2, 1); }
+@media (prefers-reduced-motion: reduce) {
+  .admin-drawer-panel { animation: none; }
+}
+
 @theme {
   /* Backgrounds */
   --color-background: var(--background);
   --color-background-secondary: var(--background-secondary);
   --color-background-input: var(--background-input);
+  --color-background-surface: var(--background-surface);
 
   /* Brand */
   --color-primary: var(--primary);
@@ -72,6 +162,65 @@
   --color-text-primary: var(--text-primary);
   --color-text-secondary: var(--text-secondary);
   --color-text-tertiary: var(--text-tertiary);
+  --color-text-muted: var(--text-muted);
+  --color-text-disabled: var(--text-disabled);
+  --color-background-kpi: var(--background-kpi);
+  --color-text-kpi-label: var(--text-kpi-label);
+  --color-illustration-1: var(--illustration-1);
+  --color-illustration-2: var(--illustration-2);
+  --color-illustration-3: var(--illustration-3);
+  --color-illustration-stroke: var(--illustration-stroke);
+  --color-admin-primary: var(--admin-primary);
+  --color-admin-primary-hover: var(--admin-primary-hover);
+  --color-admin-accent: var(--admin-accent);
+  --color-admin-badge: var(--admin-badge);
+  --color-admin-badge-text: var(--admin-badge-text);
+  --color-admin-text-description: var(--admin-text-description);
+  --color-admin-text-label: var(--admin-text-label);
+  --color-admin-text-hint: var(--admin-text-hint);
+  --color-admin-text-input: var(--admin-text-input);
+  --color-admin-input: var(--admin-input);
+  --color-admin-input-border: var(--admin-input-border);
+  --color-admin-picker: var(--admin-picker);
+  --color-admin-picker-border: var(--admin-picker-border);
+  --color-admin-card: var(--admin-card);
+  --color-admin-card-border: var(--admin-card-border);
+  --color-admin-button-border: var(--admin-button-border);
+  --color-admin-divider: var(--admin-divider);
+  --color-admin-tip: var(--admin-tip);
+  --color-admin-tip-title: var(--admin-tip-title);
+  --color-admin-tip-text: var(--admin-tip-text);
+  --color-admin-danger: var(--admin-danger);
+  --color-admin-success: var(--admin-success);
+  --color-admin-danger-strong: var(--admin-danger-strong);
+  --color-admin-danger-strong-hover: var(--admin-danger-strong-hover);
+  --color-admin-table: var(--admin-table);
+  --color-admin-table-alt: var(--admin-table-alt);
+  --color-admin-table-head: var(--admin-table-head);
+  --color-admin-table-head-text: var(--admin-table-head-text);
+  --color-admin-table-border: var(--admin-table-border);
+  --color-admin-table-divider: var(--admin-table-divider);
+  --color-admin-table-subtext: var(--admin-table-subtext);
+  --color-admin-table-date: var(--admin-table-date);
+  --color-admin-control: var(--admin-control);
+  --color-admin-control-border: var(--admin-control-border);
+  --color-admin-control-disabled-border: var(--admin-control-disabled-border);
+  --color-admin-drawer-border: var(--admin-drawer-border);
+  --color-admin-drawer-card: var(--admin-drawer-card);
+  --color-admin-drawer-muted: var(--admin-drawer-muted);
+  --color-admin-drawer-value: var(--admin-drawer-value);
+  --color-admin-drawer-notes: var(--admin-drawer-notes);
+  --color-admin-qual-hot: var(--admin-qual-hot);
+  --color-admin-qual-hot-text: var(--admin-qual-hot-text);
+  --color-admin-qual-warm: var(--admin-qual-warm);
+  --color-admin-qual-warm-text: var(--admin-qual-warm-text);
+  --color-admin-qual-cold: var(--admin-qual-cold);
+  --color-admin-qual-cold-text: var(--admin-qual-cold-text);
+  --color-admin-qual-sure: var(--admin-qual-sure);
+  --color-admin-qual-sure-text: var(--admin-qual-sure-text);
+  --color-admin-tooltip: var(--admin-tooltip);
+  --color-admin-tooltip-text: var(--admin-tooltip-text);
+  --color-admin-whatsapp: var(--admin-whatsapp);
   --color-text-placeholder: var(--text-input-placeholder);
 
   /* Fonts */

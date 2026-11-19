@@ -25,6 +25,9 @@ const baseCookie = {
 export interface AdminSession {
   uid: string;
   email: string | null;
+  /** Nome e foto do perfil no Firebase Auth (displayName / photoURL), se existirem. */
+  name: string | null;
+  picture: string | null;
 }
 
 interface SessionRecord {
@@ -134,8 +137,38 @@ export const getAdminSession = cache(async (): Promise<AdminSession | null> => {
       return null;
     }
 
-    return { uid: decoded.uid, email: decoded.email ?? null };
+    return {
+      uid: decoded.uid,
+      email: decoded.email ?? null,
+      name: typeof decoded.name === "string" ? decoded.name : null,
+      picture: typeof decoded.picture === "string" ? decoded.picture : null,
+    };
   } catch {
     return null;
+  }
+});
+
+export interface AdminProfile {
+  email: string | null;
+  name: string | null;
+  picture: string | null;
+}
+
+/**
+ * Perfil atual (nome/foto) direto do Firebase Auth. O cookie de sessão guarda os dados
+ * do momento do login; lendo aqui, mudanças feitas com `set-name`/`set-photo` aparecem
+ * sem precisar logar de novo. Se a consulta falhar, usa o que veio no cookie.
+ * Memoizado por requisição (layout + página fazem uma consulta só).
+ */
+export const getAdminProfile = cache(async (session: AdminSession): Promise<AdminProfile> => {
+  try {
+    const user = await getAdminAuth().getUser(session.uid);
+    return {
+      email: user.email ?? session.email,
+      name: user.displayName?.trim() || null,
+      picture: user.photoURL || null,
+    };
+  } catch {
+    return { email: session.email, name: session.name, picture: session.picture };
   }
 });

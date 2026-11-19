@@ -9,6 +9,8 @@
  *   node --env-file=.env.local scripts/admin-setup.mjs reset-2fa <email>    # remove o autenticador e abre a janela
  *   node --env-file=.env.local scripts/admin-setup.mjs revoke <email>       # remove o acesso e derruba sessões
  *   node --env-file=.env.local scripts/admin-setup.mjs status <email>       # mostra claim, 2FA e status
+ *   node --env-file=.env.local scripts/admin-setup.mjs set-name <email> "Nome"   # nome exibido no painel
+ *   node --env-file=.env.local scripts/admin-setup.mjs set-photo <email> <url>   # foto de perfil (vazio remove)
  *
  * Segurança: o cadastro do 2FA (QR code no login) só funciona dentro da janela aberta por
  * grant / allow-enroll / reset-2fa. Fora dela, quem souber só a senha não registra o próprio celular.
@@ -33,7 +35,7 @@ initializeApp({
 });
 const auth = getAuth();
 
-const [command, emailArg] = process.argv.slice(2);
+const [command, emailArg, valueArg] = process.argv.slice(2);
 
 async function getUserOrExit(email) {
   if (!email) {
@@ -122,6 +124,8 @@ switch (command) {
     const until = user.customClaims?.mfa_enroll_until;
     console.log({
       email: user.email,
+      nome: user.displayName ?? null,
+      foto: user.photoURL ?? null,
       disabled: user.disabled,
       emailVerified: user.emailVerified,
       admin: user.customClaims?.admin === true,
@@ -131,7 +135,29 @@ switch (command) {
     });
     break;
   }
+  case "set-name": {
+    const user = await getUserOrExit(emailArg);
+    const name = (valueArg ?? "").trim();
+    if (!name || name.length > 80) {
+      console.error('Informe o nome (até 80 caracteres): set-name <email> "Nome Sobrenome"');
+      process.exit(1);
+    }
+    await auth.updateUser(user.uid, { displayName: name });
+    console.log(`✓ Nome de ${user.email} definido como "${name}".`);
+    break;
+  }
+  case "set-photo": {
+    const user = await getUserOrExit(emailArg);
+    const url = (valueArg ?? "").trim();
+    if (url && !/^https:\/\//.test(url)) {
+      console.error("A foto precisa ser uma URL https:// (ou vazio para remover).");
+      process.exit(1);
+    }
+    await auth.updateUser(user.uid, { photoURL: url || null });
+    console.log(url ? `✓ Foto de ${user.email} atualizada.` : `✓ Foto de ${user.email} removida.`);
+    break;
+  }
   default:
-    console.log("Comandos: enable-totp | grant <email> | allow-enroll <email> | reset-2fa <email> | revoke <email> | status <email>");
+    console.log("Comandos: enable-totp | grant <email> | allow-enroll <email> | reset-2fa <email> | revoke <email> | status <email> | set-name <email> <nome> | set-photo <email> <url>");
     process.exit(command ? 1 : 0);
 }
