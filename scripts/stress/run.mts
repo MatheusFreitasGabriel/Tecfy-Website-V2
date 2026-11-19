@@ -19,6 +19,8 @@ const { registerWebsiteLead } = await import("../../src/lib/admin/crm/websiteLea
 const leadsLib = await import("../../src/lib/admin/crm/leads");
 const { addLeadNote } = await import("../../src/lib/admin/crm/notes");
 const { emptyCompanyForm, emptyContactForm, emptyLeadForm, parseCreateLeadPayload } = await import("../../src/lib/admin/crm/validation");
+const contactsLib = await import("../../src/lib/admin/crm/contacts");
+const companiesLib = await import("../../src/lib/admin/crm/companies");
 
 const db = getAdminDb();
 const PROJECT = process.env.FIREBASE_PROJECT_ID;
@@ -299,6 +301,200 @@ await scenario("8. Mesmo e-mail ao mesmo tempo pelo site e pelo cadastro manual 
   const linked = new Set(leads.docs.map((d) => d.get("contact_id")));
   check(linked.size === 1 && linked.has(contacts.docs[0]?.id), "todos os leads apontam para esse único contato");
   return failed.length;
+});
+
+// ── Contatos e empresas ──────────────────────────────────────────────────────
+
+const contactInput = (i: number, extra: Record<string, unknown> = {}) =>
+  ({
+    name: `Pessoa ${i}`,
+    email: `pessoa${i}@teste.dev`,
+    phone: `119${String(i).padStart(8, "0")}`,
+    role: null,
+    preferred_channel: null,
+    notes: null,
+    comm_consent: "nao_informada",
+    company_choice: "__none__",
+    ...extra,
+  }) as never;
+
+const companyInput = (i: number, cnpj: string | null, extra: Record<string, unknown> = {}) =>
+  ({
+    trade_name: `Empresa ${i}`,
+    legal_name: null,
+    cnpj,
+    website: null,
+    email: null,
+    phone: null,
+    segment: null,
+    size: null,
+    address: { street: null, number: null, zip: null, district: null, city: null, region: null },
+    notes: null,
+    ...extra,
+  }) as never;
+
+// CNPJs válidos (dígitos verificadores corretos) gerados a partir de uma base.
+function cnpjFrom(base: number): string {
+  const b = String(base).padStart(8, "0") + "0001";
+  const calc = (digits: string) => {
+    const w = digits.length === 12 ? [5, 4, 3, 2, 9, 8, 7, 6, 5, 4, 3, 2] : [6, 5, 4, 3, 2, 9, 8, 7, 6, 5, 4, 3, 2];
+    const sum = w.reduce((acc, x, i) => acc + Number(digits[i]) * x, 0) % 11;
+    return sum < 2 ? 0 : 11 - sum;
+  };
+  const d1 = calc(b);
+  return b + d1 + calc(b + d1);
+}
+
+await scenario("9. 200 contatos criados ao mesmo tempo + 20 tentando e-mails repetidos", async (check) => {
+  const tasks = Array.from({ length: 200 }, (_, i) => () => contactsLib.createContact(contactInput(i), ACTOR));
+  tasks.push(...Array.from({ length: 20 }, (_, i) => () => contactsLib.createContact(contactInput(i, { name: `Duplicado ${i}` }), ACTOR)));
+  const { ok, failed } = await concurrently(tasks);
+  const dupErrors = failed.filter((f) => f === "duplicate_email").length;
+  check(ok.length === 200, `${ok.length} contatos criados (esperado 200)`);
+  check(dupErrors === 20 && failed.length === 20, `${dupErrors} recusados por e-mail repetido (esperado 20; outros erros: ${failed.length - dupErrors})`);
+  check((await count("contacts")) === 200, `contatos no banco = ${await count("contacts")}`);
+  check((await count("contact_emails")) === 200, `índice de e-mail = ${await count("contact_emails")}`);
+  return failed.length - dupErrors;
+});
+
+await scenario("10. Dois contatos trocando para o MESMO e-mail ao mesmo tempo", async (check) => {
+  const a = await contactsLib.createContact(contactInput(1), ACTOR);
+  const b = await contactsLib.createContact(contactInput(2), ACTOR);
+  const target = "disputado@teste.dev";
+  const { ok, failed } = await concurrently([
+    () => contactsLib.updateContact(a.id, contactInput(1, { email: target }), ACTOR),
+    () => contactsLib.updateContact(b.id, contactInput(2, { email: target }), ACTOR),
+  ]);
+  check(ok.length === 1 && failed.length === 1 && failed[0] === "duplicate_email", `1 conseguiu, 1 recusado por e-mail repetido (ok ${ok.length}, recusados ${failed.join(",")})`);
+  const docs = await db.collection("contacts").where("email", "==", target).get();
+  check(docs.size === 1, `contatos com o e-mail disputado: ${docs.size} (esperado 1)`);
+  const winner = docs.docs[0]?.id;
+  const loser = winner === a.id ? b : a;
+  const loserDoc = await db.collection("contacts").doc(loser.id).get();
+  check(loserDoc.get("email") === loser.email, "o outro continuou com o e-mail antigo");
+  // Índices: disputado → vencedor; e-mail antigo do vencedor liberado; o do perdedor intacto.
+  const idx = async (email: string) => (await db.collection("contact_emails").where("email", "==", email).get()).docs.map((d) => d.get("contact_id"));
+  check(JSON.stringify(await idx(target)) === JSON.stringify([winner]), "índice do e-mail disputado aponta para o vencedor");
+  check((await idx(loser.email!)).length === 1, "índice do perdedor intacto");
+  const winnerOld = winner === a.id ? a.email! : b.email!;
+  check((await idx(winnerOld)).length === 0, "e-mail antigo do vencedor foi liberado");
+  return 0;
+});
+
+await scenario("11. 50 edições simultâneas no mesmo contato (histórico completo e consistente)", async (check) => {
+  const c = await contactsLib.createContact(contactInput(1), ACTOR);
+  const { ok, failed } = await concurrently(
+    Array.from({ length: 50 }, (_, i) => () => contactsLib.updateContact(c.id, contactInput(1, { phone: `1198888${String(i).padStart(4, "0")}` }), ACTOR)),
+  );
+  check(failed.length === 0, `${ok.length}/50 edições sem erro${failed.length ? ` (erros: ${[...new Set(failed)].slice(0, 2).join(" | ")})` : ""}`);
+  const changed = ok.filter((r) => r.changed).length;
+  const notes = await db.collection(`contacts/${c.id}/notes`).orderBy("created_at", "desc").get();
+  check(notes.size === changed, `registros no histórico = ${notes.size} (= edições que mudaram algo: ${changed})`);
+  const doc = await db.collection("contacts").doc(c.id).get();
+  const lastNote = String(notes.docs[0]?.get("text") ?? "");
+  const final = String(doc.get("phone"));
+  const shown = `(${final.slice(0, 2)}) ${final.slice(2, 7)}-${final.slice(7)}`;
+  check(lastNote.includes(`→ ${shown}`), `o último registro do histórico bate com o dado final (${shown})`);
+  return failed.length;
+});
+
+await scenario("12. 20 empresas com o MESMO CNPJ ao mesmo tempo + 10 'Criar lead' com esse CNPJ", async (check) => {
+  const cnpj = cnpjFrom(12345678);
+  const tasks: (() => Promise<unknown>)[] = Array.from({ length: 20 }, (_, i) => () => companiesLib.createCompany(companyInput(i, cnpj), ACTOR));
+  for (let i = 0; i < 10; i++) {
+    const body = {
+      lead: { ...emptyLeadForm(OWNER.uid), title: `Lead CNPJ ${i}` },
+      contact: { mode: "none" },
+      company: { mode: "new", draft: { ...emptyCompanyForm(), trade_name: `Empresa via lead ${i}`, cnpj } },
+    };
+    const parsed = parseCreateLeadPayload(body, [OWNER.uid]);
+    if (!parsed) throw new Error("payload");
+    tasks.push(() => leadsLib.createManualLead(parsed, OWNER, ACTOR, randomUUID()));
+  }
+  const { failed } = await concurrently(tasks);
+  const dup = failed.filter((f) => f === "duplicate_cnpj").length;
+  check(failed.length === dup, `só recusas por CNPJ repetido (outros erros: ${failed.length - dup})`);
+  const companies = await db.collection("companies").where("cnpj", "==", cnpj).get();
+  check(companies.size === 1, `empresas com esse CNPJ: ${companies.size} (esperado 1)`);
+  const leads = await db.collection("leads").get();
+  check(leads.size === 10 && leads.docs.every((l) => l.get("company_id") === companies.docs[0]?.id), "os 10 leads apontam para essa única empresa");
+  return failed.length - dup;
+});
+
+await scenario("13. Mesmo contato adicionado a 2 empresas ao mesmo tempo (fica em 1, histórico coerente)", async (check) => {
+  const c = await contactsLib.createContact(contactInput(1), ACTOR);
+  const e1 = await companiesLib.createCompany(companyInput(1, null), ACTOR);
+  const e2 = await companiesLib.createCompany(companyInput(2, null), ACTOR);
+  const { failed } = await concurrently([
+    () => companiesLib.addCompanyMember(e1.id, { mode: "existing", id: c.id }, ACTOR),
+    () => companiesLib.addCompanyMember(e2.id, { mode: "existing", id: c.id }, ACTOR),
+  ]);
+  check(failed.length === 0, "as duas operações terminaram sem erro");
+  const doc = await db.collection("contacts").doc(c.id).get();
+  const final = doc.get("company_id");
+  check(final === e1.id || final === e2.id, "o contato terminou em uma das empresas");
+  const members = (id: string) => db.collection("contacts").where("company_id", "==", id).count().get();
+  const [m1, m2] = await Promise.all([members(e1.id), members(e2.id)]);
+  check(m1.data().count + m2.data().count === 1, `aparece como funcionário em exatamente 1 empresa (${m1.data().count} + ${m2.data().count})`);
+  const lastContactNote = (await db.collection(`contacts/${c.id}/notes`).orderBy("created_at", "desc").limit(1).get()).docs[0]?.get("text") ?? "";
+  const finalName = final === e1.id ? "Empresa 1" : "Empresa 2";
+  check(String(lastContactNote).includes(finalName), `último registro do contato aponta a empresa final (${finalName})`);
+  return failed.length;
+});
+
+await scenario("14. 30 trocas de status simultâneas (Ativo/Inativo) no mesmo contato", async (check) => {
+  const c = await contactsLib.createContact(contactInput(1), ACTOR);
+  const { ok, failed } = await concurrently(
+    Array.from({ length: 30 }, (_, i) => () => contactsLib.setContactStatus(c.id, i % 2 ? "ativo" : "inativo", ACTOR)),
+  );
+  check(failed.length === 0, `${ok.length}/30 sem erro`);
+  const changes = ok.filter((r) => r.changed).length;
+  const notes = await db.collection(`contacts/${c.id}/notes`).orderBy("created_at", "desc").get();
+  check(notes.size === changes, `registros = mudanças reais (${notes.size} = ${changes})`);
+  const final = (await db.collection("contacts").doc(c.id).get()).get("status");
+  const last = String(notes.docs[0]?.get("text") ?? "");
+  check(!notes.size || last.endsWith(`${final === "ativo" ? "Ativo" : "Inativo"}.`), `último registro bate com o status final (${final})`);
+  return failed.length;
+});
+
+await scenario("15. Listas com 5.000 contatos e 5.000 empresas em páginas — sem pular nem repetir", async (check, info) => {
+  const sameInstant = new Date(Date.now() - 5_000_000);
+  for (const coll of ["contacts", "companies"]) {
+    for (let i = 0; i < 5000; i += 400) {
+      const batch = db.batch();
+      for (let j = i; j < Math.min(5000, i + 400); j++) {
+        batch.set(db.collection(coll).doc(), {
+          ...(coll === "contacts" ? { name: `Contato ${j}`, email: `c${j}@teste.dev` } : { trade_name: `Empresa ${j}` }),
+          status: "ativo",
+          created_at: j < 2500 ? new Date(Date.now() - j * 1000) : sameInstant,
+        });
+      }
+      await batch.commit();
+    }
+  }
+  for (const [label, fetchPage] of [
+    ["contatos", (c: unknown) => contactsLib.listContactsPage(c as never)],
+    ["empresas", (c: unknown) => companiesLib.listCompaniesPage(c as never, new Set())],
+  ] as const) {
+    const t = performance.now();
+    const seen = new Set<string>();
+    let dup = 0;
+    let biggest = 0;
+    let cursor: unknown = null;
+    do {
+      const page = await fetchPage(cursor);
+      biggest = Math.max(biggest, Math.round(Buffer.byteLength(JSON.stringify(page)) / 1024));
+      for (const r of page.rows) {
+        if (seen.has(r.id)) dup += 1;
+        seen.add(r.id);
+      }
+      cursor = page.next;
+    } while (cursor);
+    check(seen.size === 5000 && dup === 0, `${label}: ${seen.size} distintos, ${dup} repetidos`);
+    check(biggest < 2048, `${label}: maior página ${biggest} KB (< 2 MB do cache)`);
+    info(`${label}: leitura completa em ${Math.round(performance.now() - t)} ms`);
+  }
+  return 0;
 });
 
 // ── relatório ────────────────────────────────────────────────────────────────

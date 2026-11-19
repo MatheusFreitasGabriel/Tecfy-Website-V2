@@ -23,12 +23,37 @@ interface CreateContactModalProps {
   /** Nome da empresa já vinculada ao lead, se houver (aparece na opção "Usar empresa vinculada ao lead"). */
   leadCompanyName: string | null;
   onClose: () => void;
-  /** Dados válidos → volta para o modal do lead (nada é gravado ainda). */
+  /** Dados válidos → quem chamou decide (no lead: volta sem gravar; avulso/edição: grava). */
   onSubmit: (draft: ContactForm) => void;
+  /**
+   * "lead" (padrão): sub-modal do lead, com a opção "empresa do lead".
+   * "create" / "edit": tela Contatos (cadastro avulso / edição), sem essa opção.
+   */
+  mode?: "lead" | "create" | "edit";
+  /** Gravando no servidor (avulso/edição). */
+  busy?: boolean;
+  /** Erro do servidor (ex.: e-mail já de outro contato). */
+  serverError?: string | null;
 }
 
+const COPY = {
+  lead: { title: "Criar contato", description: "Prepare o contato e vincule-o ao lead sem perder o preenchimento.", submit: "Vincular contato", hint: "Será salvo em Contatos ao criar o lead." },
+  create: { title: "Criar contato", description: "Cadastre uma pessoa de contato.", submit: "Criar contato", hint: "O e-mail é único: não pode ser de outro contato." },
+  edit: { title: "Editar contato", description: "Cada alteração fica registrada no histórico do contato.", submit: "Salvar alterações", hint: "O e-mail é único: não pode ser de outro contato." },
+} as const;
+
 /** Sub-modal "Criar contato": prepara o contato; ele só é gravado junto com o lead. */
-export default function CreateContactModal({ initial, companies, leadCompanyName, onClose, onSubmit }: CreateContactModalProps) {
+export default function CreateContactModal({
+  initial,
+  companies,
+  leadCompanyName,
+  onClose,
+  onSubmit,
+  mode = "lead",
+  busy = false,
+  serverError = null,
+}: CreateContactModalProps) {
+  const copy = COPY[mode];
   const [form, setForm] = useState<ContactForm>(initial);
   const [errors, setErrors] = useState<FieldErrors>({});
 
@@ -47,33 +72,42 @@ export default function CreateContactModal({ initial, companies, leadCompanyName
   };
 
   const companyOptions = [
-    {
-      value: CONTACT_COMPANY_FROM_LEAD,
-      label: leadCompanyName ? `Usar empresa vinculada ao lead (${leadCompanyName})` : "Usar empresa vinculada ao lead",
-    },
+    ...(mode === "lead"
+      ? [
+          {
+            value: CONTACT_COMPANY_FROM_LEAD,
+            label: leadCompanyName ? `Usar empresa vinculada ao lead (${leadCompanyName})` : "Usar empresa vinculada ao lead",
+          },
+        ]
+      : []),
     { value: CONTACT_COMPANY_NONE, label: "Sem empresa" },
     ...companies.map((c) => ({ value: c.id, label: c.label })),
   ];
 
   return (
     <Modal
-      title="Criar contato"
-      description="Prepare o contato e vincule-o ao lead sem perder o preenchimento."
-      onClose={onClose}
+      title={copy.title}
+      description={copy.description}
+      onClose={() => !busy && onClose()}
       widthClass="max-w-[720px]"
       closeStyle="boxed"
       titleSize="md"
       footer={
         <div className="flex flex-col-reverse gap-3 sm:flex-row sm:items-center sm:justify-between">
-          <Button variant="secondary" onClick={onClose}>
+          <Button variant="secondary" onClick={onClose} disabled={busy}>
             Cancelar
           </Button>
-          <Button onClick={submit} className="sm:w-[200px]">
-            Vincular contato
+          <Button onClick={submit} disabled={busy} className="sm:w-[200px]">
+            {busy ? "Salvando..." : copy.submit}
           </Button>
         </div>
       }
     >
+      {serverError && (
+        <p role="alert" className="mb-5 rounded-lg bg-admin-danger/10 px-4 py-3 text-sm font-medium text-admin-danger">
+          {serverError}
+        </p>
+      )}
       <form
         noValidate
         onSubmit={(event) => {
@@ -154,7 +188,7 @@ export default function CreateContactModal({ initial, companies, leadCompanyName
           )}
         </Field>
         <p className="self-end pb-3 text-xs font-medium leading-[18px] text-admin-text-description">
-          Será salvo em Contatos ao criar o lead.
+          {copy.hint}
         </p>
 
         {/* Enter em qualquer campo envia. */}

@@ -79,8 +79,12 @@ Two route groups (group names don't appear in the URL):
 - **2FA TOTP is mandatory**: `establishSession()` (`src/lib/admin/session.ts`) only mints the cookie if
   the ID token has `admin === true` and `firebase.sign_in_second_factor === "totp"`.
 - Session = Firebase session cookie, 14 days (Firebase max), `HttpOnly; SameSite=Strict; Secure`,
-  `__Host-` prefix in prod (`src/lib/admin/cookieNames.ts`). `getAdminSession()` verifies with
-  `checkRevoked` + admin claim on every request.
+  `__Host-` prefix in prod (`src/lib/admin/cookieNames.ts`). `getAdminSession()` verifies on every
+  request: cookie signature/expiry locally (`verifySessionCookie(value, false)`), then — **in parallel** —
+  `getUser` (does exactly what `checkRevoked` does: disabled account / `tokensValidAfterTime` vs `auth_time`,
+  plus the *current* `admin` claim) and the `admin_sessions/{sid}` read. The same `getUser` supplies the fresh
+  name/photo, so `getAdminProfile()` makes no extra network call. Don't reintroduce sequential calls here:
+  each one costs 250–700 ms and runs on every page and API request.
 - State between password and code lives in an AES-256-GCM encrypted HttpOnly cookie
   (`pendingCookie.ts`, key `ADMIN_PENDING_SECRET`), 5 min, max 5 attempts.
 - Rate limit/lockout in Firestore `admin_rate_limits` (`rateLimit.ts`): IP 10 failures/15 min → 1 h
@@ -173,6 +177,14 @@ the 409 branch in `Form.tsx` is now unused).
 - Owner assignment = bulk action `set_owner` (also in the details drawer); linking a contact/company to a lead
   that has none = `POST …/api/crm/leads/[id]/links` (never replaces an existing link). Both write a
   `kind: "system"` note to the lead timeline.
+- **Contacts & companies** (`crm/contacts.ts`, `crm/companies.ts`): lists at `/contatos`, `/empresas`; detail is a
+  full page (`/contatos/[id]`, `/empresas/[id]`), not a modal. Unlike leads they ARE editable, but every edit
+  writes a `system` note with the diff (`crm/diff.ts`); nothing is deleted — `status: ativo|inativo` instead
+  (missing = ativo). Unique e-mail per contact (`contact_emails`) and unique CNPJ per company
+  (`company_cnpjs`, `crm/companyIndex.ts`) — also enforced in "Criar lead"/"Vincular" (reuses the existing one).
+  A company is **Cliente** when it has an active `contracts` doc with its `company_id` (Products screen, future;
+  the user owns that design), otherwise "Prospect". Timelines for all three use `crm/notes.ts`
+  (`listNotes`/`addNote` by parent collection) and the shared `components/admin/shared/NotesTimeline`.
 - Message templates: built-ins in code (`BUILTIN_TEMPLATES`, read-only) + custom ones in
   `message_templates` (`POST …/api/crm/templates`).
 - `scripts/crm-setup.mjs migrate-leads [--apply]` converts pre-v2 website leads (dry-run by default).

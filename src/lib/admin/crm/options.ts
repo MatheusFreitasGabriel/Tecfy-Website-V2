@@ -148,3 +148,12 @@ export const companyRegions = defineOptions([
   { value: "EX", label: "Exterior" },
 ] as const);
 export type CompanyRegion = (typeof companyRegions.options)[number]["value"];
+
+// ── Contato / Empresa: situação no cadastro ─────────────────────────────────
+
+/** Contatos e empresas não são apagados: ficam inativos. Ausente no documento = ativo. */
+export const entityStatuses = defineOptions([
+  { value: "ativo", label: "Ativo", hint: "Cadastro em uso." },
+  { value: "inativo", label: "Inativo", hint: "Guardado para histórico, fora do dia a dia." },
+] as const);
+export type EntityStatus = (typeof entityStatuses.options)[number]["value"];

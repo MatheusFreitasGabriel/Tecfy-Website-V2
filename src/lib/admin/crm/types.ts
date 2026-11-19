@@ -214,3 +214,90 @@ export interface AdminUserOption {
   uid: string;
   name: string;
 }
+
+// ── Contatos e empresas (telas próprias) ─────────────────────────────────────
+
+export const COMPANY_NOTES_SUBCOLLECTION = "notes";
+export const CONTACT_NOTES_SUBCOLLECTION = "notes";
+
+/** Resumo de lead mostrado nas páginas de contato/empresa. */
+export interface LeadSummary {
+  id: string;
+  title: string;
+  stage: LeadStage;
+  qualification: LeadQualification;
+  status: LeadStatus;
+  owner_name: string | null;
+  /** ISO. */
+  created_at: string | null;
+}
+
+/** Negociação (deal) resumida. */
+export interface DealSummary {
+  id: string;
+  title: string;
+  status: string;
+  owner_name: string | null;
+  estimated_value_cents: number | null;
+  created_at: string | null;
+}
+
+/** Produto/contrato da empresa (vem da futura tela de Produtos). */
+export interface ContractSummary {
+  id: string;
+  product_name: string;
+  monthly_value: number;
+  status: "active" | "cancelled";
+  signed_at: string | null;
+}
+
+/** Linha da lista de contatos. */
+export interface ContactRow {
+  id: string;
+  name: string;
+  role: string | null;
+  email: string | null;
+  phone: string | null;
+  status: "ativo" | "inativo";
+  company: { id: string; name: string } | null;
+  created_at: string | null;
+}
+
+/** Página do contato. */
+export interface ContactDetail extends ContactRow {
+  preferred_channel: ContactChannel | null;
+  comm_consent: ContactConsent;
+  notes: string | null;
+  created_by_name: string | null;
+  leads: LeadSummary[];
+}
+
+/** Linha da lista de empresas. */
+export interface CompanyRow {
+  id: string;
+  trade_name: string;
+  legal_name: string | null;
+  cnpj: string | null;
+  segment: CompanySegment | null;
+  size: CompanySize | null;
+  email: string | null;
+  phone: string | null;
+  city: string | null;
+  region: CompanyRegion | null;
+  status: "ativo" | "inativo";
+  /** Tem produto/contrato ativo → Cliente. Senão, Prospect. */
+  is_client: boolean;
+  created_at: string | null;
+}
+
+/** Página da empresa. */
+export interface CompanyDetail extends CompanyRow {
+  website: string | null;
+  address: CompanyAddress;
+  notes: string | null;
+  created_by_name: string | null;
+  employees: ContactRow[];
+  leads: LeadSummary[];
+  deals: DealSummary[];
+  contracts: ContractSummary[];
+}

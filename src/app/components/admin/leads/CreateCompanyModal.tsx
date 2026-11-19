@@ -11,12 +11,24 @@ import Modal from "../form/Modal";
 interface CreateCompanyModalProps {
   initial: CompanyForm;
   onClose: () => void;
-  /** Dados válidos → volta para o modal do lead (nada é gravado ainda). */
+  /** Dados válidos → quem chamou decide (no lead: volta sem gravar; avulso/edição: grava). */
   onSubmit: (draft: CompanyForm) => void;
+  /** "lead" (padrão): sub-modal do lead. "create" / "edit": tela Empresas. */
+  mode?: "lead" | "create" | "edit";
+  busy?: boolean;
+  /** Erro do servidor (ex.: CNPJ já de outra empresa). */
+  serverError?: string | null;
 }
 
+const COPY = {
+  lead: { title: "Criar empresa", description: "Prepare a empresa. O cadastro será criado junto com o lead.", submit: "Vincular empresa", hint: "Será salva no módulo Empresas." },
+  create: { title: "Criar empresa", description: "Cadastre uma empresa (cliente ou prospect).", submit: "Criar empresa", hint: "O CNPJ é único: não pode ser de outra empresa." },
+  edit: { title: "Editar empresa", description: "Cada alteração fica registrada no histórico da empresa.", submit: "Salvar alterações", hint: "O CNPJ é único: não pode ser de outra empresa." },
+} as const;
+
 /** Sub-modal "Criar empresa": prepara a empresa; ela só é gravada junto com o lead. */
-export default function CreateCompanyModal({ initial, onClose, onSubmit }: CreateCompanyModalProps) {
+export default function CreateCompanyModal({ initial, onClose, onSubmit, mode = "lead", busy = false, serverError = null }: CreateCompanyModalProps) {
+  const copy = COPY[mode];
   const [form, setForm] = useState<CompanyForm>(initial);
   const [errors, setErrors] = useState<FieldErrors>({});
 
@@ -49,26 +61,31 @@ export default function CreateCompanyModal({ initial, onClose, onSubmit }: Creat
 
   return (
     <Modal
-      title="Criar empresa"
-      description="Prepare a empresa. O cadastro será criado junto com o lead."
-      onClose={onClose}
+      title={copy.title}
+      description={copy.description}
+      onClose={() => !busy && onClose()}
       widthClass="max-w-[880px]"
       closeStyle="boxed"
       titleSize="md"
       footer={
         <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-          <p className="text-xs font-medium leading-[18px] text-admin-text-description">Será salva no módulo Empresas.</p>
+          <p className="text-xs font-medium leading-[18px] text-admin-text-description">{copy.hint}</p>
           <div className="flex flex-col-reverse gap-3 sm:flex-row">
-            <Button variant="secondary" onClick={onClose}>
+            <Button variant="secondary" onClick={onClose} disabled={busy}>
               Cancelar
             </Button>
-            <Button onClick={submit} className="sm:w-[224px]">
-              Vincular empresa
+            <Button onClick={submit} disabled={busy} className="sm:w-[224px]">
+              {busy ? "Salvando..." : copy.submit}
             </Button>
           </div>
         </div>
       }
     >
+      {serverError && (
+        <p role="alert" className="mb-5 rounded-lg bg-admin-danger/10 px-4 py-3 text-sm font-medium text-admin-danger">
+          {serverError}
+        </p>
+      )}
       <form
         noValidate
         onSubmit={(event) => {

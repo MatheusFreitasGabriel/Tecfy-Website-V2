@@ -10,15 +10,14 @@ import { getCachedAdmins, getCachedLeads, getCachedTemplates } from "@/lib/admin
  */
 export default async function LeadsPage() {
   const basePath = getAdminBasePath() ?? "";
+  // Dados começam a carregar JUNTO com a checagem de sessão (economiza uma ida inteira ao servidor).
+  // Nada é exibido sem sessão válida: sem ela, o resultado é descartado e vai para o login.
+  const data = Promise.all([getCachedLeads(), getCachedAdmins(), getCachedTemplates()]);
+  data.catch(() => undefined); // se a sessão falhar e redirecionar, um erro aqui não fica solto
   const session = await getAdminSession();
   if (!session) redirect(`${basePath}/login`);
 
-  const [{ leads, truncated }, admins, templates, profile] = await Promise.all([
-    getCachedLeads(),
-    getCachedAdmins(),
-    getCachedTemplates(),
-    getAdminProfile(session),
-  ]);
+  const [[{ leads, truncated }, admins, templates], profile] = await Promise.all([data, getAdminProfile(session)]);
 
   return (
     <div className="flex min-h-screen w-full flex-col p-8">

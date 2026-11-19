@@ -12,6 +12,8 @@ interface LeadsPaginationProps {
   total: number;
   onPage: (page: number) => void;
   onPerPage: (perPage: number) => void;
+  /** Como chamar os itens ("lead"/"leads", "contato"/"contatos"...). */
+  noun?: { one: string; many: string };
 }
 
 /** Números das páginas com reticências: 1 … 4 5 6 … 12. */
@@ -32,19 +34,19 @@ const navClass =
   "h-[34px] w-[116px] rounded-md bg-admin-control text-[13px] font-medium leading-[19px] text-text-primary outline outline-1 -outline-offset-1 outline-admin-control-disabled-border transition-colors hover:bg-admin-card disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:bg-admin-control";
 
 /** Rodapé da lista: "Exibindo X–Y de N", itens por página e navegação. */
-export default function LeadsPagination({ page, pageCount, perPage, total, onPage, onPerPage }: LeadsPaginationProps) {
+export default function LeadsPagination({ page, pageCount, perPage, total, onPage, onPerPage, noun = { one: "lead", many: "leads" } }: LeadsPaginationProps) {
   const id = useId();
   const from = total === 0 ? 0 : (page - 1) * perPage + 1;
   const to = Math.min(page * perPage, total);
 
   return (
     <nav
-      aria-label="Paginação dos leads"
+      aria-label={`Paginação dos ${noun.many}`}
       className="flex flex-col gap-4 border-t border-admin-table-border bg-admin-table-alt px-6 py-4 lg:flex-row lg:items-center lg:justify-between"
     >
       <div className="flex flex-wrap items-center gap-x-10 gap-y-3">
         <p className="text-[13px] font-medium leading-[19px] text-admin-text-hint" aria-live="polite">
-          Exibindo {integer.format(from)}–{integer.format(to)} de {integer.format(total)} {total === 1 ? "lead" : "leads"}
+          Exibindo {integer.format(from)}–{integer.format(to)} de {integer.format(total)} {total === 1 ? noun.one : noun.many}
         </p>
         <div className="flex items-center gap-3">
           <label htmlFor={id} className="text-[13px] font-medium leading-[19px] text-admin-text-hint">

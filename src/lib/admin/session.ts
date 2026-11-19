@@ -116,11 +116,24 @@ export const getAdminSession = cache(async (): Promise<AdminSession | null> => {
   if (!value || !sid || !/^[a-f0-9]{64}$/.test(sid)) return null;
 
   try {
-    const decoded = await getAdminAuth().verifySessionCookie(value, true);
+    // Assinatura + expiração do cookie: verificação local (chaves públicas do Google em cache).
+    const decoded = await getAdminAuth().verifySessionCookie(value, false);
     if (decoded.admin !== true) return null;
 
+    // As duas consultas de rede rodam EM PARALELO (antes eram 3 em sequência, ~1 s por tela):
+    //  - usuário no Firebase Auth → revogação (o mesmo que checkRevoked faz) + nome/foto atuais;
+    //  - registro da sessão no Firestore → mesmo usuário, validade e mesmo navegador.
     const ref = getAdminDb().collection(SESSIONS_COLLECTION).doc(sid);
-    const snap = await ref.get();
+    const [user, snap] = await Promise.all([getAdminAuth().getUser(decoded.uid), ref.get()]);
+
+    // Revogação, exatamente como o checkRevoked do Firebase: conta desativada ou tokens revogados
+    // depois do login (revokeRefreshTokens no logout, "revoke" ou anomalia de sessão).
+    if (user.disabled) return null;
+    const validSinceSeconds = user.tokensValidAfterTime ? new Date(user.tokensValidAfterTime).getTime() / 1000 : 0;
+    if (decoded.auth_time < validSinceSeconds) return null;
+    // Claim atual (não só a do cookie): admin removido pelo "revoke" perde acesso na hora.
+    if (user.customClaims?.admin !== true) return null;
+
     const record = snap.data() as SessionRecord | undefined;
     if (!record || record.uid !== decoded.uid || record.expires_at_ms < Date.now()) return null;
 
@@ -137,11 +150,12 @@ export const getAdminSession = cache(async (): Promise<AdminSession | null> => {
       return null;
     }
 
+    // Nome/foto/e-mail ATUAIS (do mesmo getUser): mudanças com set-name/set-photo aparecem sem relogar.
     return {
       uid: decoded.uid,
-      email: decoded.email ?? null,
-      name: typeof decoded.name === "string" ? decoded.name : null,
-      picture: typeof decoded.picture === "string" ? decoded.picture : null,
+      email: user.email ?? decoded.email ?? null,
+      name: user.displayName?.trim() || (typeof decoded.name === "string" ? decoded.name : null),
+      picture: user.photoURL || (typeof decoded.picture === "string" ? decoded.picture : null),
     };
   } catch {
     return null;
@@ -155,20 +169,11 @@ export interface AdminProfile {
 }
 
 /**
- * Perfil atual (nome/foto) direto do Firebase Auth. O cookie de sessão guarda os dados
- * do momento do login; lendo aqui, mudanças feitas com `set-name`/`set-photo` aparecem
- * sem precisar logar de novo. Se a consulta falhar, usa o que veio no cookie.
- * Memoizado por requisição (layout + página fazem uma consulta só).
+ * Perfil atual (nome/foto/e-mail). Já vem atualizado do Firebase Auth dentro de getAdminSession
+ * (mesma consulta da checagem de revogação) — aqui não há nenhuma ida extra à rede.
  */
-export const getAdminProfile = cache(async (session: AdminSession): Promise<AdminProfile> => {
-  try {
-    const user = await getAdminAuth().getUser(session.uid);
-    return {
-      email: user.email ?? session.email,
-      name: user.displayName?.trim() || null,
-      picture: user.photoURL || null,
-    };
-  } catch {
-    return { email: session.email, name: session.name, picture: session.picture };
-  }
-});
+export const getAdminProfile = cache(async (session: AdminSession): Promise<AdminProfile> => ({
+  email: session.email,
+  name: session.name,
+  picture: session.picture,
+}));

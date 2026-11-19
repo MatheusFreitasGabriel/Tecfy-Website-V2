@@ -62,3 +62,8 @@ export async function ensureEmailIndex(db: Firestore, email: string): Promise<vo
     .create({ contact_id: contactId, email: normalize(email), ...(latest ? { latest_lead_id: latest.id } : {}) })
     .catch(() => undefined);
 }
+
+/** Dentro de uma transação (escrita): libera o e-mail antigo (contato trocou de e-mail). */
+export function deleteEmailIndex(tx: Transaction, db: Firestore, email: string): void {
+  tx.delete(emailIndexRef(db, email));
+}

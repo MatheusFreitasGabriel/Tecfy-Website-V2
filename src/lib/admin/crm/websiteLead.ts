@@ -80,6 +80,7 @@ export async function registerWebsiteLead(input: WebsiteLeadInput): Promise<Webs
           preferred_channel: null,
           notes: null,
           comm_consent: "nao_informada",
+          status: "ativo",
           company_id: null,
           origin_lead_id: leadRef.id,
           created_by_uid: null,

@@ -1,6 +1,7 @@
 "use client";
 
 import { useRef, useState } from "react";
+import Link from "next/link";
 import { createPortal } from "react-dom";
 import { FaBuilding, FaCheck, FaCopy, FaEnvelope, FaHandshake, FaUser, FaUserCheck, FaWhatsapp, FaXmark } from "react-icons/fa6";
 import { leadQualifications, leadSources, leadStages, leadStatuses } from "@/lib/admin/crm/options";
@@ -168,7 +169,11 @@ export default function LeadDetailsDrawer({
           <h2 id={titleId} className="break-words text-[28px] font-semibold leading-[34px] text-text-primary">
             {lead.title}
           </h2>
-          {lead.company && <p className="mt-1.5 text-sm font-medium leading-5 text-admin-text-description">{lead.company.name}</p>}
+          {lead.company && (
+            <Link href={`${basePath}/empresas/${lead.company.id}`} className="mt-1.5 inline-block text-sm font-medium leading-5 text-admin-accent hover:underline">
+              {lead.company.name}
+            </Link>
+          )}
 
           <div className="mt-8 grid grid-cols-1 gap-4 sm:grid-cols-2">
             <div className="flex h-[84px] flex-col justify-center gap-1.5 rounded-[10px] border border-admin-card-border bg-admin-drawer-card px-4">
@@ -188,7 +193,14 @@ export default function LeadDetailsDrawer({
             <h3 id={`${id}-contact`} className="text-base font-semibold leading-[22px] text-text-primary">
               Contato
             </h3>
-            {lead.contact && <p className="mt-1 text-sm text-admin-text-description">{lead.contact.name}</p>}
+            {lead.contact &&
+              (lead.contact.id ? (
+                <Link href={`${basePath}/contatos/${lead.contact.id}`} className="mt-1 inline-block text-sm text-admin-accent hover:underline">
+                  {lead.contact.name} →
+                </Link>
+              ) : (
+                <p className="mt-1 text-sm text-admin-text-description">{lead.contact.name}</p>
+              ))}
             {canLinkContact && (
               <div className="mt-3">
                 <InlineAction icon={FaUser} onClick={() => onLink("contact")}>
@@ -232,7 +244,9 @@ export default function LeadDetailsDrawer({
                 label="Empresa"
                 value={
                   lead.company ? (
-                    lead.company.name
+                    <Link href={`${basePath}/empresas/${lead.company.id}`} className="text-admin-accent hover:underline">
+                      {lead.company.name}
+                    </Link>
                   ) : (
                     <span className="mt-1 inline-flex">
                       <InlineAction icon={FaBuilding} onClick={() => onLink("company")}>

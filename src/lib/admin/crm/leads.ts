@@ -10,6 +10,7 @@ import {
   type Transaction,
 } from "firebase-admin/firestore";
 import { getAdminDb } from "@/lib/firebaseAdmin";
+import { ensureCnpjIndex, readCnpjIndex, writeCnpjIndex } from "./companyIndex";
 import { ensureEmailIndex, readEmailIndex, writeEmailIndex } from "./contactIndex";
 import { leadEntries, leadQualifications, leadSources, leadStages, leadStatuses } from "./options";
 import {
@@ -211,10 +212,13 @@ export async function createManualLead(input: ParsedCreateLead, owner: Actor, ac
   const companies = db.collection(COMPANIES_COLLECTION);
   const leadRef = db.collection(LEADS_COLLECTION).doc(`m_${requestId}`);
   if (input.contact.mode === "new" && input.contact.data.email) await ensureEmailIndex(db, input.contact.data.email);
+  if (input.company.mode === "new" && input.company.data.cnpj) await ensureCnpjIndex(db, input.company.data.cnpj);
 
   return db.runTransaction(async (tx) => {
     // 1. Leituras (toda leitura da transação vem antes das escritas).
     const already = await tx.get(leadRef);
+    // Empresa "nova" com CNPJ já cadastrado → reaproveita a existente (CNPJ único).
+    const cnpjOwner = input.company.mode === "new" && input.company.data.cnpj ? await readCnpjIndex(tx, db, input.company.data.cnpj) : null;
     if (already.exists) return { id: leadRef.id, created: false, contactReused: false };
 
     const mustExist: DocumentReference[] = [];
@@ -237,9 +241,14 @@ export async function createManualLead(input: ParsedCreateLead, owner: Actor, ac
     let companyId: string | null = null;
     if (input.company.mode === "existing") companyId = input.company.id;
     if (input.company.mode === "new") {
-      const ref = companies.doc();
-      companyId = ref.id;
-      tx.create(ref, { ...input.company.data, origin_lead_id: leadRef.id, ...authorship });
+      if (cnpjOwner) {
+        companyId = cnpjOwner;
+      } else {
+        const ref = companies.doc();
+        companyId = ref.id;
+        tx.create(ref, { ...input.company.data, status: "ativo", origin_lead_id: leadRef.id, ...authorship });
+        if (input.company.data.cnpj) writeCnpjIndex(tx, db, input.company.data.cnpj, ref.id);
+      }
     }
 
     // 3. Contato do lead.
@@ -252,6 +261,7 @@ export async function createManualLead(input: ParsedCreateLead, owner: Actor, ac
         delete contact.company_choice; // só decide a empresa; não é gravado
         tx.create(contacts.doc(contactPlan.id), {
           ...contact,
+          status: "ativo",
           company_id: contactCompanyChoice === CONTACT_COMPANY_FROM_LEAD ? companyId : contactOwnCompany,
           origin_lead_id: leadRef.id,
           ...authorship,
@@ -384,6 +394,7 @@ export async function linkLeadRelations(leadId: string, input: ParsedLinkLead, a
   const contacts = db.collection(CONTACTS_COLLECTION);
   const companies = db.collection(COMPANIES_COLLECTION);
   if (input.contact.mode === "new" && input.contact.data.email) await ensureEmailIndex(db, input.contact.data.email);
+  if (input.company.mode === "new" && input.company.data.cnpj) await ensureCnpjIndex(db, input.company.data.cnpj);
 
   return db.runTransaction(async (tx) => {
     const lead = await tx.get(leadRef);
@@ -407,6 +418,8 @@ export async function linkLeadRelations(leadId: string, input: ParsedLinkLead, a
     const contactPlan = input.contact.mode === "new" ? await planNewContact(tx, db, input.contact.data) : null;
     // Contato reaproveitado: lê para mostrar o nome/dados reais dele.
     const reusedSnap = contactPlan?.reused ? await tx.get(contacts.doc(contactPlan.id)) : null;
+    const cnpjOwner = input.company.mode === "new" && input.company.data.cnpj ? await readCnpjIndex(tx, db, input.company.data.cnpj) : null;
+    const cnpjOwnerSnap = cnpjOwner ? await tx.get(companies.doc(cnpjOwner)) : null;
 
     const now = FieldValue.serverTimestamp();
     const authorship = { created_by_uid: actor.uid, created_by_name: actor.name, created_at: now, updated_at: now };
@@ -420,10 +433,16 @@ export async function linkLeadRelations(leadId: string, input: ParsedLinkLead, a
       const name = str(snapOf(companies.doc(companyId))?.get("trade_name")) ?? "Sem nome";
       result.company = { id: companyId, name };
       log.push(`Empresa vinculada: ${name}.`);
+    } else if (input.company.mode === "new" && cnpjOwner) {
+      companyId = cnpjOwner;
+      const name = str(cnpjOwnerSnap?.get("trade_name")) ?? input.company.data.trade_name;
+      result.company = { id: companyId, name };
+      log.push(`Empresa vinculada (o CNPJ já era de ${name}): ${name}.`);
     } else if (input.company.mode === "new") {
       const ref = companies.doc();
       companyId = ref.id;
-      tx.create(ref, { ...input.company.data, origin_lead_id: leadId, ...authorship });
+      tx.create(ref, { ...input.company.data, status: "ativo", origin_lead_id: leadId, ...authorship });
+      if (input.company.data.cnpj) writeCnpjIndex(tx, db, input.company.data.cnpj, ref.id);
       result.company = { id: companyId, name: input.company.data.trade_name };
       log.push(`Empresa cadastrada e vinculada: ${input.company.data.trade_name}.`);
     }
@@ -454,6 +473,7 @@ export async function linkLeadRelations(leadId: string, input: ParsedLinkLead, a
         delete contact.company_choice; // só decide a empresa; não é gravado
         tx.create(contacts.doc(contactPlan.id), {
           ...contact,
+          status: "ativo",
           company_id: contactChoice === CONTACT_COMPANY_FROM_LEAD ? companyId : contactOwnCompany,
           origin_lead_id: leadId,
           ...authorship,
