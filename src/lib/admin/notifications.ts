@@ -1,5 +1,5 @@
 import "server-only";
-import { FieldValue, type Timestamp } from "firebase-admin/firestore";
+import { FieldValue, Timestamp } from "firebase-admin/firestore";
 import { getAdminDb } from "@/lib/firebaseAdmin";
 
 /**
@@ -50,9 +50,15 @@ export function leadReturnedNotification(leadId: string, personName: string, pla
 
 const LIST_LIMIT = 50;
 
-/** Últimas notificações (mais recentes primeiro) com o estado de leitura do usuário. */
-export async function listNotifications(uid: string): Promise<{ items: NotificationRow[]; unread: number }> {
-  const snap = await getAdminDb().collection(NOTIFICATIONS_COLLECTION).orderBy("created_at", "desc").limit(LIST_LIMIT).get();
+/**
+ * Últimas notificações (mais recentes primeiro) com o estado de leitura do usuário.
+ * Com `since`, traz só as criadas DEPOIS desse instante — o sino consulta assim a cada minuto,
+ * e na maioria das vezes a resposta é vazia (1 leitura mínima em vez de 50).
+ */
+export async function listNotifications(uid: string, since?: Date): Promise<{ items: NotificationRow[]; unread: number }> {
+  let query = getAdminDb().collection(NOTIFICATIONS_COLLECTION).orderBy("created_at", "desc");
+  if (since) query = query.where("created_at", ">", Timestamp.fromDate(since));
+  const snap = await query.limit(LIST_LIMIT).get();
   const items = snap.docs.map((doc): NotificationRow => {
     const d = doc.data();
     const created = d.created_at as Timestamp | undefined;

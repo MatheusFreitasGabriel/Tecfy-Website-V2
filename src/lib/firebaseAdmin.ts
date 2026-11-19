@@ -12,6 +12,12 @@ function getAdminApp(): App {
   const apps = getApps();
   if (apps.length > 0) return apps[0];
 
+  // Emulador local do Firestore (testes de stress): sem credencial, projeto "demo-*".
+  // Só acontece com FIRESTORE_EMULATOR_HOST definido — nunca em produção.
+  if (process.env.FIRESTORE_EMULATOR_HOST) {
+    return initializeApp({ projectId: process.env.FIREBASE_PROJECT_ID || "demo-tecfy" });
+  }
+
   const projectId = process.env.FIREBASE_PROJECT_ID;
   const clientEmail = process.env.FIREBASE_CLIENT_EMAIL;
   const privateKey = process.env.FIREBASE_PRIVATE_KEY;

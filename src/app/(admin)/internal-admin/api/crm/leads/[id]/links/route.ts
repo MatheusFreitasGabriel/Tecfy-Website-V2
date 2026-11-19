@@ -1,5 +1,6 @@
 import { readGuardedJson } from "@/lib/admin/requestContext";
 import { getAdminProfile, getAdminSession } from "@/lib/admin/session";
+import { CRM_TAGS, invalidateCrm } from "@/lib/admin/crm/cache";
 import { AlreadyLinkedError, MissingReferenceError, linkLeadRelations } from "@/lib/admin/crm/leads";
 import { CREATE_LEAD_MAX_BYTES, parseLinkLeadPayload } from "@/lib/admin/crm/validation";
 
@@ -11,7 +12,7 @@ type Context = { params: Promise<{ id: string }> };
 /**
  * Vincula contato e/ou empresa a um lead que ainda não tem. Corpo: `{ contact?, company? }`
  * (mesmo formato do "Criar lead": none / existing { id } / new { draft }). Não troca vínculos existentes.
- * Resposta: 200 { ok } · 400 invalid_input · 401 · 409 already_linked · 500.
+ * Resposta: 200 { contact, company } · 400 invalid_input · 401 · 409 already_linked · 500.
  */
 export async function POST(request: Request, { params }: Context) {
   const body = await readGuardedJson(request, CREATE_LEAD_MAX_BYTES);
@@ -26,8 +27,13 @@ export async function POST(request: Request, { params }: Context) {
 
   try {
     const profile = await getAdminProfile(session);
-    await linkLeadRelations(id, parsed, { uid: session.uid, name: profile.name ?? profile.email ?? session.uid });
-    return Response.json({ ok: true });
+    const result = await linkLeadRelations(id, parsed, { uid: session.uid, name: profile.name ?? profile.email ?? session.uid });
+    invalidateCrm(
+      CRM_TAGS.leads,
+      ...(parsed.contact.mode === "new" ? [CRM_TAGS.contacts] : []),
+      ...(parsed.company.mode === "new" ? [CRM_TAGS.companies] : []),
+    );
+    return Response.json(result);
   } catch (error) {
     if (error instanceof AlreadyLinkedError) return Response.json({ error: "already_linked" }, { status: 409 });
     if (error instanceof MissingReferenceError) return Response.json({ error: "invalid_input" }, { status: 400 });

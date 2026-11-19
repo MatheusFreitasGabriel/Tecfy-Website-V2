@@ -7,8 +7,11 @@
  *   node --env-file=.env.local scripts/crm-setup.mjs status          # resumo de produtos e contratos
  *   node --env-file=.env.local scripts/crm-setup.mjs migrate-leads   # mostra os leads antigos que seriam convertidos (não grava)
  *   node --env-file=.env.local scripts/crm-setup.mjs migrate-leads --apply   # converte de verdade
+ *   node --env-file=.env.local scripts/crm-setup.mjs backfill-email-index    # simula o índice de e-mail único dos contatos
+ *   node --env-file=.env.local scripts/crm-setup.mjs backfill-email-index --apply
  */
 import { cert, initializeApp } from "firebase-admin/app";
+import { createHash } from "node:crypto";
 import { FieldValue, getFirestore } from "firebase-admin/firestore";
 
 const { FIREBASE_PROJECT_ID, FIREBASE_CLIENT_EMAIL, FIREBASE_PRIVATE_KEY } = process.env;
@@ -129,7 +132,32 @@ switch (command) {
     if (apply) console.log(`Pronto: ${converted} lead(s) convertido(s).`);
     break;
   }
+  case "backfill-email-index": {
+    // Índice contact_emails/{sha256(email)} → { contact_id } (garante e-mail único entre contatos).
+    // Contatos criados antes do índice não têm entrada; aqui ela é criada. E-mails repetidos são só listados.
+    const apply = process.argv.includes("--apply");
+    const contacts = await db.collection("contacts").select("email").get();
+    const byEmail = new Map();
+    for (const doc of contacts.docs) {
+      const email = typeof doc.get("email") === "string" ? doc.get("email").trim().toLowerCase() : "";
+      if (!email) continue;
+      byEmail.set(email, [...(byEmail.get(email) ?? []), doc.id]);
+    }
+    let created = 0;
+    for (const [email, ids] of byEmail) {
+      if (ids.length > 1) console.log(`  ! e-mail repetido em ${ids.length} contatos: ${ids.join(", ")} (o primeiro vira o dono)`);
+      const ref = db.collection("contact_emails").doc(createHash("sha256").update(email).digest("hex"));
+      if ((await ref.get()).exists) continue;
+      created += 1;
+      // Último lead do contato (fluxo "voltou pelo site").
+      const leads = await db.collection("leads").where("contact_id", "==", ids[0]).limit(20).get();
+      const latest = leads.docs.sort((x, y) => (y.get("created_at")?.toMillis?.() ?? 0) - (x.get("created_at")?.toMillis?.() ?? 0))[0];
+      if (apply) await ref.set({ contact_id: ids[0], email, ...(latest ? { latest_lead_id: latest.id } : {}) });
+    }
+    console.log(`${byEmail.size} e-mail(s) em ${contacts.size} contato(s); ${created} entrada(s) ${apply ? "criada(s)" : "a criar (simulação — use --apply)"}.`);
+    break;
+  }
   default:
-    console.log("Comandos: seed-products | status | migrate-leads [--apply]");
+    console.log("Comandos: seed-products | status | migrate-leads [--apply] | backfill-email-index [--apply]");
     process.exit(command ? 1 : 0);
 }

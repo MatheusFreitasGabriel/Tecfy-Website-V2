@@ -38,20 +38,18 @@ export async function listLeadNotes(leadId: string, limit = 100): Promise<LeadNo
   }));
 }
 
-/** Acrescenta uma observação (com autor e horário do servidor) e devolve como ficou gravada. */
+/**
+ * Acrescenta uma observação (com autor e horário do servidor) e devolve como ficou gravada.
+ * Sem transação e sem tocar no documento do lead: cada observação é um documento novo, então
+ * muitas observações ao mesmo tempo no mesmo lead não disputam nada (o teste de stress com
+ * transação + updated_at no lead perdia 498 de 500).
+ */
 export async function addLeadNote(leadId: string, text: string, actor: Actor): Promise<LeadNoteRow> {
-  const db = getAdminDb();
-  const leadRef = db.collection(LEADS_COLLECTION).doc(leadId);
+  const leadRef = getAdminDb().collection(LEADS_COLLECTION).doc(leadId);
+  if (!(await leadRef.get()).exists) throw new LeadNotFoundError();
   const noteRef = leadRef.collection(LEAD_NOTES_SUBCOLLECTION).doc();
   // Horário fixado aqui (servidor) para poder devolver a nota já pronta para a timeline.
   const createdAt = Timestamp.now();
-
-  await db.runTransaction(async (tx) => {
-    const lead = await tx.get(leadRef);
-    if (!lead.exists) throw new LeadNotFoundError();
-    tx.create(noteRef, { kind: "note", text, author_uid: actor.uid, author_name: actor.name, created_at: createdAt });
-    tx.update(leadRef, { updated_at: FieldValue.serverTimestamp() });
-  });
-
+  await noteRef.create({ kind: "note", text, author_uid: actor.uid, author_name: actor.name, created_at: createdAt });
   return { id: noteRef.id, kind: "note", text, author_name: actor.name, created_at: createdAt.toDate().toISOString() };
 }

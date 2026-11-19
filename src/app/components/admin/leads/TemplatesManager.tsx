@@ -1,7 +1,6 @@
 "use client";
 
 import { useRef, useState } from "react";
-import { useRouter } from "next/navigation";
 import { FaCopy, FaEnvelope, FaPlus, FaTrash, FaWhatsapp } from "react-icons/fa6";
 import { TEMPLATE_VARIABLES } from "@/lib/admin/crm/templates";
 import type { MessageTemplate, TemplateChannel } from "@/lib/admin/crm/types";
@@ -14,6 +13,8 @@ interface TemplatesManagerProps {
   basePath: string;
   templates: MessageTemplate[];
   initialChannel?: TemplateChannel;
+  /** Lista atualizada devolvida pelo servidor (a tela troca sem recarregar). */
+  onChange: (templates: MessageTemplate[]) => void;
   onClose: () => void;
 }
 
@@ -22,8 +23,7 @@ type Editing = { id: string | null; form: TemplateForm };
 const emptyForm = (channel: TemplateChannel): TemplateForm => ({ channel, name: "", subject: "", body: "" });
 
 /** Lista, cria, edita e exclui modelos de WhatsApp e e-mail. Os padrões só podem ser duplicados. */
-export default function TemplatesManager({ basePath, templates, initialChannel = "whatsapp", onClose }: TemplatesManagerProps) {
-  const router = useRouter();
+export default function TemplatesManager({ basePath, templates, initialChannel = "whatsapp", onChange, onClose }: TemplatesManagerProps) {
   const bodyRef = useRef<HTMLTextAreaElement>(null);
   const [channel, setChannel] = useState<TemplateChannel>(initialChannel);
   const [editing, setEditing] = useState<Editing | null>(null);
@@ -60,8 +60,9 @@ export default function TemplatesManager({ basePath, templates, initialChannel =
         setMessage({ tone: "error", text: response.status === 401 ? "Sua sessão expirou." : "Não foi possível salvar. Tente de novo." });
         return false;
       }
+      const data = (await response.json().catch(() => ({}))) as { templates?: MessageTemplate[] };
+      if (data.templates) onChange(data.templates);
       setMessage({ tone: "success", text: success });
-      router.refresh();
       return true;
     } catch {
       setMessage({ tone: "error", text: "Sem conexão com o servidor." });

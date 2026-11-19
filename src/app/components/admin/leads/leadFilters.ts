@@ -163,7 +163,8 @@ export function matchesLead(lead: LeadRow, f: LeadFilters, currentUid: string, n
 }
 
 export function sortLeads(list: LeadRow[], sort: LeadSort): LeadRow[] {
-  const byDate = (a: LeadRow, b: LeadRow) => (a.created_at ?? "").localeCompare(b.created_at ?? "");
+  // Desempate por id: leads com o mesmo horário mantêm sempre a mesma ordem (lista estável).
+  const byDate = (a: LeadRow, b: LeadRow) => (a.created_at ?? "").localeCompare(b.created_at ?? "") || a.id.localeCompare(b.id);
   const byName = (a: LeadRow, b: LeadRow) => a.title.localeCompare(b.title, "pt-BR", { sensitivity: "base" });
   const sorted = [...list];
   switch (sort) {

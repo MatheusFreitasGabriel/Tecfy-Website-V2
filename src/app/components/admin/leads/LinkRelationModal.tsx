@@ -9,6 +9,7 @@ import Combobox from "../form/Combobox";
 import Modal from "../form/Modal";
 import CreateCompanyModal from "./CreateCompanyModal";
 import CreateContactModal from "./CreateContactModal";
+import { invalidateCrmOptions, useCrmOptions } from "./crmOptionsStore";
 
 type Kind = "contact" | "company";
 type Choice<T> = { mode: "existing"; option: PickerOption } | { mode: "new"; draft: T } | null;
@@ -17,10 +18,9 @@ interface LinkRelationModalProps {
   kind: Kind;
   lead: LeadRow;
   basePath: string;
-  contacts: PickerOption[];
-  companies: PickerOption[];
   onClose: () => void;
-  onLinked: () => void;
+  /** O que o lead passou a ter (a tela atualiza sem recarregar). */
+  onLinked: (result: { contact: LeadRow["contact"]; company: LeadRow["company"] }) => void;
 }
 
 const SERVER_ERRORS: Record<number, string> = {
@@ -33,7 +33,13 @@ const SERVER_ERRORS: Record<number, string> = {
  * Vincula um contato ou uma empresa a um lead que ainda não tem: busca um cadastro existente
  * ou cria um novo (salvo no módulo correspondente). Fica registrado na timeline do lead.
  */
-export default function LinkRelationModal({ kind, lead, basePath, contacts, companies, onClose, onLinked }: LinkRelationModalProps) {
+export default function LinkRelationModal({ kind, lead, basePath, onClose, onLinked }: LinkRelationModalProps) {
+  // Carregadas só agora (modal aberto), 1x por sessão da tela. Empresas também servem ao "Criar contato".
+  const contactsState = useCrmOptions(basePath, "contacts");
+  const companiesState = useCrmOptions(basePath, "companies");
+  const contacts = contactsState.options ?? [];
+  const companies = companiesState.options ?? [];
+  const loadingOptions = (kind === "contact" ? contactsState.options : companiesState.options) === null;
   const isContact = kind === "contact";
   const [choice, setChoice] = useState<Choice<ContactForm | CompanyForm>>(null);
   const [creating, setCreating] = useState(false);
@@ -58,7 +64,9 @@ export default function LinkRelationModal({ kind, lead, basePath, contacts, comp
         setError(SERVER_ERRORS[response.status] ?? "Não foi possível vincular. Tente de novo.");
         return;
       }
-      onLinked();
+      const data = (await response.json()) as { contact: LeadRow["contact"]; company: LeadRow["company"] };
+      if (choice.mode === "new") invalidateCrmOptions(isContact ? "contacts" : "companies");
+      onLinked(data);
     } catch {
       setError("Sem conexão com o servidor. Tente de novo.");
     } finally {
@@ -129,7 +137,7 @@ export default function LinkRelationModal({ kind, lead, basePath, contacts, comp
                 placeholder={isContact ? "Buscar contato existente" : "Buscar empresa existente"}
                 ariaLabel={isContact ? "Buscar contato existente" : "Buscar empresa existente"}
                 onSelect={(option) => setChoice({ mode: "existing", option })}
-                emptyText="Nada encontrado."
+                emptyText={loadingOptions ? "Carregando cadastros..." : "Nada encontrado."}
               />
               <Button variant="secondary" icon={FaPlus} block onClick={() => setCreating(true)}>
                 {isContact ? "Criar contato" : "Criar empresa"}

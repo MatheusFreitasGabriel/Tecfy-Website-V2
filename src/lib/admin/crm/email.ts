@@ -1,5 +1,5 @@
 import "server-only";
-import { FieldValue, type Timestamp } from "firebase-admin/firestore";
+import { FieldValue, Timestamp } from "firebase-admin/firestore";
 import { getAdminDb } from "@/lib/firebaseAdmin";
 import { CONTACTS_COLLECTION, LEAD_EMAILS_SUBCOLLECTION, LEADS_COLLECTION, type LeadEmailRow } from "./types";
 import type { Actor } from "./leads";
@@ -63,7 +63,7 @@ function toHtml(body: string): string {
  * Envia o e-mail e registra no histórico do lead. O destinatário PRECISA ser o e-mail do próprio lead
  * ou do contato vinculado (o CRM não envia para qualquer endereço).
  */
-export async function sendLeadEmail(leadId: string, input: SendEmailForm, actor: Actor, replyTo: string | null): Promise<void> {
+export async function sendLeadEmail(leadId: string, input: SendEmailForm, actor: Actor, replyTo: string | null): Promise<LeadEmailRow> {
   const db = getAdminDb();
   const leadRef = db.collection(LEADS_COLLECTION).doc(leadId);
   const lead = await leadRef.get();
@@ -89,7 +89,8 @@ export async function sendLeadEmail(leadId: string, input: SendEmailForm, actor:
     reply_to: replyTo,
     sent_by_uid: actor.uid,
     sent_by_name: actor.name,
-    created_at: FieldValue.serverTimestamp(),
+    // Horário fixado aqui para devolver o registro pronto para a tela.
+    created_at: Timestamp.now(),
   };
 
   let providerId: string | null = null;
@@ -101,10 +102,21 @@ export async function sendLeadEmail(leadId: string, input: SendEmailForm, actor:
     throw error instanceof EmailProviderError ? error : new EmailProviderError(reason);
   }
 
-  const batch = db.batch();
-  batch.create(history, { ...record, status: "sent", provider_id: providerId });
-  batch.update(leadRef, { last_contact_at: FieldValue.serverTimestamp(), updated_at: FieldValue.serverTimestamp() });
-  await batch.commit();
+  // O e-mail JÁ saiu: primeiro garante o registro no histórico; depois marca o lead
+  // (se o lead foi excluído nesse meio-tempo, o update falha mas o histórico não se perde).
+  await history.create({ ...record, status: "sent", provider_id: providerId });
+  await leadRef
+    .update({ last_contact_at: FieldValue.serverTimestamp(), updated_at: FieldValue.serverTimestamp() })
+    .catch(() => console.error("crm email: lead sumiu antes de marcar last_contact_at"));
+
+  return {
+    id: history.id,
+    to: input.to,
+    subject: input.subject,
+    status: "sent",
+    sent_by_name: actor.name,
+    created_at: record.created_at.toDate().toISOString(),
+  };
 }
 
 /** Últimos e-mails enviados para o lead (mais recentes primeiro). */

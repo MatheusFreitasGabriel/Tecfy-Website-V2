@@ -1,10 +1,9 @@
 "use client";
 
 import { useState } from "react";
-import { useRouter } from "next/navigation";
 import { FaBuilding, FaPen, FaPlus, FaUser, FaXmark } from "react-icons/fa6";
 import type { IconType } from "react-icons";
-import type { AdminUserOption, PickerOption } from "@/lib/admin/crm/types";
+import type { AdminUserOption, LeadRow, PickerOption } from "@/lib/admin/crm/types";
 import {
   emptyCompanyForm,
   emptyContactForm,
@@ -23,6 +22,7 @@ import Modal from "../form/Modal";
 import CreateCompanyModal from "./CreateCompanyModal";
 import LeadFields from "./LeadFields";
 import CreateContactModal from "./CreateContactModal";
+import { invalidateCrmOptions, useCrmOptions } from "./crmOptionsStore";
 
 type Link<TDraft> = { mode: "none" } | { mode: "existing"; option: PickerOption } | { mode: "new"; draft: TDraft };
 
@@ -31,9 +31,9 @@ interface CreateLeadModalProps {
   admins: AdminUserOption[];
   /** Usuário logado (responsável padrão). */
   currentUid: string;
-  contacts: PickerOption[];
-  companies: PickerOption[];
   onClose: () => void;
+  /** Lead gravado (a lista insere na hora, sem recarregar). `contactReused` = e-mail já tinha contato. */
+  onCreated: (lead: LeadRow, contactReused: boolean) => void;
 }
 
 const SERVER_ERRORS: Record<number, string> = {
@@ -45,8 +45,15 @@ const SERVER_ERRORS: Record<number, string> = {
  * Modal "Criar lead". Contato e empresa novos ficam só aqui até salvar; aí vai tudo junto num
  * POST e o servidor grava numa transação (empresa → contato → lead).
  */
-export default function CreateLeadModal({ basePath, admins, currentUid, contacts, companies, onClose }: CreateLeadModalProps) {
-  const router = useRouter();
+export default function CreateLeadModal({ basePath, admins, currentUid, onClose, onCreated }: CreateLeadModalProps) {
+  // Buscas de contato/empresa: carregadas só agora (modal aberto), 1x por sessão da tela.
+  const contacts = useCrmOptions(basePath, "contacts");
+  const companies = useCrmOptions(basePath, "companies");
+  /**
+   * Idempotência: o mesmo id acompanha as tentativas de salvar ESTE lead (reenvio após erro de rede
+   * não duplica); um id novo é gerado depois que ele é salvo.
+   */
+  const [requestId, setRequestId] = useState(() => crypto.randomUUID());
   const defaultOwner = admins.some((a) => a.uid === currentUid) ? currentUid : (admins[0]?.uid ?? "");
 
   const [form, setForm] = useState<LeadForm>(() => emptyLeadForm(defaultOwner));
@@ -101,7 +108,7 @@ export default function CreateLeadModal({ basePath, admins, currentUid, contacts
       const response = await fetch(`${basePath}/api/crm/leads`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(payload),
+        body: JSON.stringify({ ...payload, request_id: requestId }),
         credentials: "same-origin",
       });
       if (!response.ok) {
@@ -109,7 +116,11 @@ export default function CreateLeadModal({ basePath, admins, currentUid, contacts
         return;
       }
 
-      router.refresh(); // contador, tabela e listas de contato/empresa
+      const data = (await response.json()) as { lead: LeadRow | null; contactReused: boolean };
+      if (data.lead) onCreated(data.lead, data.contactReused);
+      if (payload.contact.mode === "new") invalidateCrmOptions("contacts");
+      if (payload.company.mode === "new") invalidateCrmOptions("companies");
+      setRequestId(crypto.randomUUID());
       if (!createAnother) {
         onClose();
         return;
@@ -192,7 +203,8 @@ export default function CreateLeadModal({ basePath, admins, currentUid, contacts
                 icon={FaUser}
                 link={contact}
                 name={contact.mode === "new" ? contact.draft.name : null}
-                options={contacts}
+                options={contacts.options ?? []}
+                loading={contacts.options === null && !contacts.error}
                 searchPlaceholder="Buscar contato existente"
                 createLabel="Criar contato"
                 onPick={(option) => setContact({ mode: "existing", option })}
@@ -204,7 +216,8 @@ export default function CreateLeadModal({ basePath, admins, currentUid, contacts
                 icon={FaBuilding}
                 link={company}
                 name={company.mode === "new" ? company.draft.trade_name : null}
-                options={companies}
+                options={companies.options ?? []}
+                loading={companies.options === null && !companies.error}
                 searchPlaceholder="Buscar empresa existente"
                 createLabel="Criar empresa"
                 onPick={(option) => setCompany({ mode: "existing", option })}
@@ -226,7 +239,7 @@ export default function CreateLeadModal({ basePath, admins, currentUid, contacts
       {subModal === "contact" && (
         <CreateContactModal
           initial={contact.mode === "new" ? contact.draft : emptyContactForm()}
-          companies={companies}
+          companies={companies.options ?? []}
           leadCompanyName={companyName}
           onClose={() => setSubModal(null)}
           onSubmit={(draft) => {
@@ -256,6 +269,8 @@ interface LinkCardProps<TDraft> {
   /** Nome do rascunho novo (quando `link.mode === "new"`). */
   name: string | null;
   options: PickerOption[];
+  /** A lista ainda está sendo carregada. */
+  loading: boolean;
   searchPlaceholder: string;
   createLabel: string;
   onPick: (option: PickerOption) => void;
@@ -270,6 +285,7 @@ function LinkCard<TDraft>({
   link,
   name,
   options,
+  loading,
   searchPlaceholder,
   createLabel,
   onPick,
@@ -288,7 +304,7 @@ function LinkCard<TDraft>({
               placeholder={searchPlaceholder}
               ariaLabel={searchPlaceholder}
               onSelect={onPick}
-              emptyText={options.length ? "Nada encontrado." : "Nenhum cadastro ainda."}
+              emptyText={loading ? "Carregando cadastros..." : options.length ? "Nada encontrado." : "Nenhum cadastro ainda."}
             />
           </div>
           <Button variant="secondary" icon={FaPlus} block onClick={onCreate}>

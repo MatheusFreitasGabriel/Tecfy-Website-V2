@@ -51,26 +51,54 @@ export default function NotificationBell({ basePath }: { basePath: string }) {
   const [now, setNow] = useState(() => Date.now());
   const clicks = useRef(0);
 
-  const load = useCallback(async () => {
-    try {
-      const response = await fetch(`${basePath}/api/notifications`, { credentials: "same-origin", cache: "no-store" });
-      if (!response.ok) throw new Error(String(response.status));
-      const data = (await response.json()) as { items: NotificationItem[]; unread: number };
-      setItems(data.items);
-      setUnread(data.unread);
-      setError(false);
-    } catch {
-      setError(true);
-    } finally {
-      setLoaded(true);
-      setNow(Date.now());
-    }
-  }, [basePath]);
+  /** created_at da notificação mais nova que já temos (base da consulta incremental). */
+  const latest = useRef<string | null>(null);
+  const inflight = useRef(false);
+
+  /**
+   * Carga completa (1ª vez e ao abrir a gaveta): últimas 50 + contagem de não lidas.
+   * Carga incremental (a cada minuto): só o que chegou depois da mais nova — quase sempre vazio.
+   */
+  const load = useCallback(
+    async (mode: "full" | "since") => {
+      if (inflight.current) return;
+      if (mode === "since" && !latest.current) mode = "full";
+      inflight.current = true;
+      try {
+        const query = mode === "since" ? `?since=${encodeURIComponent(latest.current!)}` : "";
+        const response = await fetch(`${basePath}/api/notifications${query}`, { credentials: "same-origin", cache: "no-store" });
+        if (!response.ok) throw new Error(String(response.status));
+        const data = (await response.json()) as { items: NotificationItem[]; unread: number };
+        if (mode === "full") {
+          setItems(data.items);
+          setUnread(data.unread);
+        } else if (data.items.length) {
+          setItems((list) => {
+            const known = new Set(list.map((n) => n.id));
+            return [...data.items.filter((n) => !known.has(n.id)), ...list].slice(0, 50);
+          });
+          setUnread((count) => count + data.unread);
+        }
+        if (data.items[0]?.created_at && (!latest.current || data.items[0].created_at > latest.current)) {
+          latest.current = data.items[0].created_at;
+        }
+        setError(false);
+      } catch {
+        setError(true);
+      } finally {
+        inflight.current = false;
+        setLoaded(true);
+        setNow(Date.now());
+      }
+    },
+    [basePath],
+  );
 
   useEffect(() => {
-    const first = setTimeout(load, 0);
-    const timer = setInterval(load, POLL_MS);
-    const onVisible = () => document.visibilityState === "visible" && load();
+    const first = setTimeout(() => load("full"), 0);
+    // Só consulta com a aba visível; ao voltar para a aba, confere na hora.
+    const timer = setInterval(() => document.visibilityState === "visible" && load("since"), POLL_MS);
+    const onVisible = () => document.visibilityState === "visible" && load("since");
     document.addEventListener("visibilitychange", onVisible);
     return () => {
       clearTimeout(first);
@@ -113,7 +141,7 @@ export default function NotificationBell({ basePath }: { basePath: string }) {
           type="button"
           onClick={() => {
             setOpen(true);
-            load();
+            load("full");
           }}
           aria-label={label}
           className="relative flex h-[43px] w-[43px] shrink-0 items-center justify-center rounded-full border border-border-input bg-background-surface text-text-muted transition-colors hover:text-text-primary focus-visible:outline-2 focus-visible:outline-admin-accent"

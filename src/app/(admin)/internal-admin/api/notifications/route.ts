@@ -9,7 +9,7 @@ export const dynamic = "force-dynamic";
 const isId = (value: unknown): value is string => typeof value === "string" && /^[A-Za-z0-9_-]{1,128}$/.test(value);
 
 /**
- * Notificações do usuário logado: `{ items, unread }`.
+ * Notificações do usuário logado: `{ items, unread }`. Com `?since=<ISO>`, só as novas.
  * Só leitura: gate do proxy + sessão (GET da mesma origem não manda Origin).
  */
 export async function GET(request: Request) {
@@ -17,7 +17,11 @@ export async function GET(request: Request) {
   const session = await getAdminSession();
   if (!session) return Response.json({ error: "unauthorized" }, { status: 401 });
   try {
-    return Response.json(await listNotifications(session.uid));
+    // ?since=<ISO> → só as novas desde a última consulta (o sino usa isso no polling).
+    const sinceParam = new URL(request.url).searchParams.get("since");
+    const since = sinceParam ? new Date(sinceParam) : undefined;
+    if (since && Number.isNaN(since.getTime())) return Response.json({ error: "invalid_input" }, { status: 400 });
+    return Response.json(await listNotifications(session.uid, since));
   } catch (error) {
     console.error("notifications list error", error instanceof Error ? error.message : "unknown");
     return Response.json({ error: "internal_error" }, { status: 500 });

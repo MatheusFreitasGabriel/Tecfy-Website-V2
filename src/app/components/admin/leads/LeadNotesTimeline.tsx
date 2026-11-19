@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useId, useState } from "react";
+import { useId, useState } from "react";
 import { FaGear, FaPlus } from "react-icons/fa6";
 import type { LeadNoteRow, LeadRow } from "@/lib/admin/crm/types";
 import { NOTE_MAX_LENGTH, validateNoteText } from "@/lib/admin/crm/validation";
@@ -10,8 +10,12 @@ import { formatDateTime } from "./leadVisuals";
 interface LeadNotesTimelineProps {
   lead: LeadRow;
   basePath: string;
-  /** Muda quando algo gera registro automático (atribuição, vínculo), para recarregar. */
-  version?: number;
+  /** Observações já carregadas pela tela (null = carregando). */
+  notes: LeadNoteRow[] | null;
+  loadError: boolean;
+  onRetry: () => void;
+  /** Observação gravada: a tela acrescenta na memória (sem buscar de novo). */
+  onAdded: (note: LeadNoteRow) => void;
 }
 
 type TimelineItem = LeadNoteRow & { initial?: boolean };
@@ -26,30 +30,11 @@ const SERVER_ERRORS: Record<number, string> = {
  * Observações do lead em forma de timeline. Só acrescenta: cada observação registra quem escreveu,
  * o dia e a hora. A observação feita no cadastro aparece por último, como ponto de partida.
  */
-export default function LeadNotesTimeline({ lead, basePath, version = 0 }: LeadNotesTimelineProps) {
+export default function LeadNotesTimeline({ lead, basePath, notes, loadError, onRetry, onAdded }: LeadNotesTimelineProps) {
   const fieldId = useId();
-  const [notes, setNotes] = useState<LeadNoteRow[] | null>(null);
-  const [loadError, setLoadError] = useState(false);
   const [text, setText] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
-
-  useEffect(() => {
-    let cancelled = false;
-    (async () => {
-      try {
-        const response = await fetch(`${basePath}/api/crm/leads/${lead.id}/notes`, { credentials: "same-origin" });
-        if (!response.ok) throw new Error(String(response.status));
-        const data = (await response.json()) as { notes: LeadNoteRow[] };
-        if (!cancelled) setNotes(data.notes);
-      } catch {
-        if (!cancelled) setLoadError(true);
-      }
-    })();
-    return () => {
-      cancelled = true;
-    };
-  }, [basePath, lead.id, version]);
 
   const add = async () => {
     if (saving) return;
@@ -72,7 +57,7 @@ export default function LeadNotesTimeline({ lead, basePath, version = 0 }: LeadN
         return;
       }
       const data = (await response.json()) as { note: LeadNoteRow };
-      setNotes((current) => [data.note, ...(current ?? [])]);
+      onAdded(data.note);
       setText("");
     } catch {
       setError("Sem conexão com o servidor. Tente de novo.");
@@ -126,7 +111,12 @@ export default function LeadNotesTimeline({ lead, basePath, version = 0 }: LeadN
       </div>
 
       {loadError ? (
-        <p className="text-sm text-admin-text-hint">Não foi possível carregar as observações.</p>
+        <p className="text-sm text-admin-text-hint">
+          Não foi possível carregar as observações.{" "}
+          <button type="button" onClick={onRetry} className="font-semibold text-admin-accent hover:underline">
+            Tentar de novo
+          </button>
+        </p>
       ) : notes === null ? (
         <p className="text-sm text-admin-text-hint">Carregando observações...</p>
       ) : items.length === 0 ? (

@@ -17,7 +17,11 @@ no external API is used.
 - **Run production build**: `npm start`
 - **Lint**: `npm run lint` / auto-fix: `npm run lint:fix`
 
-There is no test framework configured — no test runner, no test scripts.
+There is no unit-test framework. **Stress/integrity tests**: `npm run stress` runs `scripts/stress/run.mts`
+against a local **Firestore emulator** (project `demo-tecfy`; never production — the script aborts without
+`FIRESTORE_EMULATOR_HOST`). Needs the global `firebase` CLI and **Java 21+** (`JAVA_HOME`). It calls the real
+`crm/*` functions under heavy concurrency and checks invariants (no lost/duplicated/mixed data). Run it after
+touching any transaction in `src/lib/admin/crm/`.
 
 ## Tech Stack
 
@@ -142,19 +146,28 @@ the 409 branch in `Form.tsx` is now unused).
   live in `src/lib/admin/crm/options.ts`; shared client/server validation in `crm/validation.ts`.
 - Manual lead creation: `CreateLeadModal` → `POST ${basePath}/api/crm/leads` (gate + session) →
   `createManualLead()` writes company → contact → lead in one transaction.
-- Leads list (`LeadsView`): search/filters/sort/pagination run client-side over `listLeads()` (≤2000).
+- **Request budget (keep it low)**: reads go through `crm/cache.ts` (`unstable_cache`, tags `crm-*`); every
+  write route calls `invalidateCrm(...)` with `revalidateTag(tag, { expire: 0 })`. The leads list is cached in
+  pages of 1,500 (cursor = created_at nanos + doc id; Next's cache rejects items > 2 MB), limit 5,000.
+  `LeadsView` never `router.refresh()`es after an action: routes return what changed and the view keeps a local
+  layer (`patches`/`added`/`removed`) over the server list, reset when a new list arrives ("Atualizar lista").
+  Contact/company pickers load on demand (`GET …/api/crm/options`, `crmOptionsStore`); the drawer loads
+  notes + e-mails in one `GET …/api/crm/leads/[id]/activity`, kept per lead in memory. The bell polls
+  `?since=` only while the tab is visible.
+- **Transactions: point reads only, never queries** (queries lock index ranges and deadlock under load — proven
+  by the stress test). Contact e-mail uniqueness = `contact_emails/{sha256}` → `{ contact_id, latest_lead_id }`
+  (`crm/contactIndex.ts`); `ensureEmailIndex` repairs legacy contacts *before* the transaction. Website
+  submissions: `crm/websiteLead.ts` (`registerWebsiteLead`). Manual create is idempotent (`request_id` → lead id
+  `m_<uuid>`). Notes are plain creates (no transaction, no write to the lead doc). Bulk ops are transactions that
+  skip vanished leads. `crm-setup.mjs backfill-email-index [--apply]` indexes pre-existing contacts.
+- Leads list (`LeadsView`): search/filters/sort/pagination run client-side over the loaded leads.
   Row and bulk actions go to `POST ${basePath}/api/crm/leads/bulk` (`set_qualification|set_stage|
-  set_status|convert|delete`, ≤200 ids). `convert` creates a minimal `deals/{id}` and marks the lead
+  set_status|set_owner|convert|delete`, ≤200 ids). `convert` creates a minimal `deals/{id}` and marks the lead
   (`deal_id`, `converted_at`); `delete` removes only the lead, never its contact/company.
-- Lead filtering/sorting/chips live in `leads/leadFilters.ts` (pure); filter drawer = `LeadsFilterDrawer`.
-- Leads carry their own `email`/`phone` (quick contact) besides the linked contact. WhatsApp opens
-  `wa.me` with a filled template (`crm/templates.ts`); e-mail is sent server-side via Resend
-  (`crm/email.ts`, envs `RESEND_API_KEY` + `CRM_EMAIL_FROM`) at `POST …/api/crm/leads/[id]/email` —
-  the recipient must be the lead's or its contact's e-mail. History in `leads/{id}/emails`.
 - Lead details are read-only by design (no editing of saved data). Notes are an append-only timeline in
   `leads/{id}/notes` (author + server time), via `GET/POST …/api/crm/leads/[id]/notes` (`crm/notes.ts`).
 - New website lead → `/api/leads` writes an `admin_notifications` doc in the same transaction (bell in the
-  sidebar, `NotificationBell`, polls `GET …/api/notifications` every 60 s; per-user `read_by`) and, via
+  sidebar, `NotificationBell`, polls `GET …/api/notifications?since=` every 60 s while visible; per-user `read_by`) and, via
   `after()`, `notifyNewWebsiteLead()` e-mails `LEAD_NOTIFY_EMAIL` (default contato@tecfy.dev) with the
   phone + WhatsApp link, plus the optional Discord/Slack webhook. The panel URL is never put in e-mails.
 - Owner assignment = bulk action `set_owner` (also in the details drawer); linking a contact/company to a lead

@@ -3,7 +3,7 @@
 import { useRef, useState } from "react";
 import { FaGear, FaPaperPlane, FaTriangleExclamation } from "react-icons/fa6";
 import { TEMPLATE_VARIABLES, fillTemplate, type TemplateContext } from "@/lib/admin/crm/templates";
-import type { MessageTemplate } from "@/lib/admin/crm/types";
+import type { LeadEmailRow, MessageTemplate } from "@/lib/admin/crm/types";
 import { EMAIL_LIMITS, validateSendEmail, withoutKey, type FieldErrors } from "@/lib/admin/crm/validation";
 import Button from "../form/Button";
 import { Field, Select, TextInput } from "../form/Field";
@@ -19,7 +19,8 @@ interface EmailComposerProps {
   /** O envio está configurado no servidor (Resend)? */
   configured: boolean;
   onClose: () => void;
-  onSent: () => void;
+  /** Registro do e-mail enviado (a tela acrescenta no histórico sem buscar de novo). */
+  onSent: (email: LeadEmailRow | null) => void;
   onManageTemplates: () => void;
 }
 
@@ -97,7 +98,8 @@ export default function EmailComposer({
         setFormError(SERVER_ERRORS[response.status] ?? "Não foi possível enviar o e-mail. Tente de novo.");
         return;
       }
-      onSent();
+      const data = (await response.json().catch(() => ({}))) as { email?: LeadEmailRow };
+      onSent(data.email ?? null);
     } catch {
       setFormError("Sem conexão com o servidor. Tente de novo.");
     } finally {

@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { FaFileImport, FaPlus } from "react-icons/fa6";
-import type { AdminUserOption, PickerOption } from "@/lib/admin/crm/types";
+import type { AdminUserOption, LeadRow } from "@/lib/admin/crm/types";
 import Button from "../form/Button";
 import CreateLeadModal from "./CreateLeadModal";
 
@@ -11,14 +11,14 @@ interface LeadsHeaderProps {
   basePath: string;
   admins: AdminUserOption[];
   currentUid: string;
-  contacts: PickerOption[];
-  companies: PickerOption[];
+  /** Lead recém-criado (a lista insere sem recarregar). */
+  onCreated: (lead: LeadRow, contactReused: boolean) => void;
 }
 
 const integer = new Intl.NumberFormat("pt-BR");
 
 /** Topo da tela de Leads: título + total, descrição e as ações "Importar lista" / "Criar lead". */
-export default function LeadsHeader({ total, basePath, admins, currentUid, contacts, companies }: LeadsHeaderProps) {
+export default function LeadsHeader({ total, basePath, admins, currentUid, onCreated }: LeadsHeaderProps) {
   const [creating, setCreating] = useState(false);
 
   return (
@@ -59,9 +59,8 @@ export default function LeadsHeader({ total, basePath, admins, currentUid, conta
           basePath={basePath}
           admins={admins}
           currentUid={currentUid}
-          contacts={contacts}
-          companies={companies}
           onClose={() => setCreating(false)}
+          onCreated={onCreated}
         />
       )}
     </header>

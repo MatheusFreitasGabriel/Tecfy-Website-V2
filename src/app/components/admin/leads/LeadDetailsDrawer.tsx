@@ -1,10 +1,17 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { FaBuilding, FaCheck, FaCopy, FaEnvelope, FaHandshake, FaUser, FaUserCheck, FaWhatsapp, FaXmark } from "react-icons/fa6";
 import { leadQualifications, leadSources, leadStages, leadStatuses } from "@/lib/admin/crm/options";
-import type { LeadEmailRow, LeadRow } from "@/lib/admin/crm/types";
+import type { LeadEmailRow, LeadNoteRow, LeadRow } from "@/lib/admin/crm/types";
+
+/** Atividade do lead (1 requisição, guardada em memória pela tela). */
+export interface LeadActivity {
+  notes: LeadNoteRow[];
+  emails: LeadEmailRow[];
+  emailConfigured: boolean;
+}
 import Button from "../form/Button";
 import Tooltip from "../form/Tooltip";
 import { useModalBehavior } from "../form/useModalBehavior";
@@ -31,8 +38,11 @@ interface LeadDetailsDrawerProps {
   lead: LeadRow;
   basePath: string;
   busy: boolean;
-  /** Muda quando um e-mail é enviado, para recarregar o histórico. */
-  historyVersion: number;
+  /** null = carregando. */
+  activity: LeadActivity | null;
+  activityError: boolean;
+  onRetryActivity: () => void;
+  onNoteAdded: (note: LeadNoteRow) => void;
   onClose: () => void;
   onConvert: () => void;
   onWhatsApp: () => void;
@@ -42,8 +52,6 @@ interface LeadDetailsDrawerProps {
   onAssign: () => void;
   /** Abre "Vincular contato/empresa" (só quando o lead ainda não tem). */
   onLink: (kind: "contact" | "company") => void;
-  /** Muda quando algo gera registro automático na timeline (para recarregar). */
-  notesVersion: number;
 }
 
 /** Botão pequeno de ação dentro do painel (vincular, atribuir). */
@@ -114,14 +122,16 @@ export default function LeadDetailsDrawer({
   lead,
   basePath,
   busy,
-  historyVersion,
+  activity,
+  activityError,
+  onRetryActivity,
+  onNoteAdded,
   onClose,
   onConvert,
   onWhatsApp,
   onEmail,
   onAssign,
   onLink,
-  notesVersion,
 }: LeadDetailsDrawerProps) {
   const panelRef = useRef<HTMLElement>(null);
   const id = useModalBehavior(panelRef, onClose);
@@ -130,28 +140,7 @@ export default function LeadDetailsDrawer({
   const { phones, emails } = contactChannelsOf(lead);
   const canLinkContact = !lead.contact;
 
-  const [history, setHistory] = useState<{ configured: boolean; emails: LeadEmailRow[] } | null>(null);
-  const [historyError, setHistoryError] = useState(false);
-
-  useEffect(() => {
-    let cancelled = false;
-    (async () => {
-      try {
-        const response = await fetch(`${basePath}/api/crm/leads/${lead.id}/email`, { credentials: "same-origin" });
-        if (!response.ok) throw new Error(String(response.status));
-        const data = (await response.json()) as { configured: boolean; emails: LeadEmailRow[] };
-        if (!cancelled) {
-          setHistory(data);
-          setHistoryError(false);
-        }
-      } catch {
-        if (!cancelled) setHistoryError(true);
-      }
-    })();
-    return () => {
-      cancelled = true;
-    };
-  }, [basePath, lead.id, historyVersion]);
+  const sentEmails = activity?.emails ?? null;
 
   return createPortal(
     <div className="admin-modal-overlay fixed inset-0 z-50 flex justify-end bg-black/60" onMouseDown={(e) => e.target === e.currentTarget && onClose()}>
@@ -230,7 +219,7 @@ export default function LeadDetailsDrawer({
                       <p className="text-xs font-medium text-admin-text-description">E-mail{emails.length > 1 ? ` · ${e.label}` : ""}</p>
                       <p className="truncate text-sm font-medium text-admin-drawer-value">{e.email}</p>
                     </div>
-                    <ActionIcon label="Escrever e-mail" onClick={() => onEmail(history?.configured ?? false)}>
+                    <ActionIcon label="Escrever e-mail" onClick={() => onEmail(activity?.emailConfigured ?? false)}>
                       <FaEnvelope aria-hidden className="h-3.5 w-3.5" />
                     </ActionIcon>
                     <CopyButton value={e.email} />
@@ -303,22 +292,22 @@ export default function LeadDetailsDrawer({
             <h3 id={`${id}-notes`} className="text-base font-medium leading-[22px] text-text-primary">
               Observações
             </h3>
-            <LeadNotesTimeline lead={lead} basePath={basePath} version={notesVersion} />
+            <LeadNotesTimeline lead={lead} basePath={basePath} notes={activity?.notes ?? null} loadError={activityError} onRetry={onRetryActivity} onAdded={onNoteAdded} />
           </section>
 
           <section className="mt-8" aria-labelledby={`${id}-emails`}>
             <h3 id={`${id}-emails`} className="text-base font-medium leading-[22px] text-text-primary">
               E-mails enviados
             </h3>
-            {historyError ? (
+            {activityError ? (
               <p className="mt-3 text-sm text-admin-text-hint">Não foi possível carregar o histórico.</p>
-            ) : !history ? (
+            ) : !sentEmails ? (
               <p className="mt-3 text-sm text-admin-text-hint">Carregando...</p>
-            ) : history.emails.length === 0 ? (
+            ) : sentEmails.length === 0 ? (
               <p className="mt-3 text-sm text-admin-text-hint">Nenhum e-mail enviado pelo CRM ainda.</p>
             ) : (
               <ul className="mt-3 flex flex-col gap-2">
-                {history.emails.map((m) => (
+                {sentEmails.map((m) => (
                   <li key={m.id} className="rounded-lg bg-admin-drawer-card px-4 py-3 outline outline-1 -outline-offset-1 outline-admin-card-border">
                     <p className="truncate text-sm font-medium text-admin-drawer-value">{m.subject}</p>
                     <p className="mt-0.5 text-xs text-admin-text-hint">
