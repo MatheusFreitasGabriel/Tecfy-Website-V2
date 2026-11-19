@@ -16,6 +16,7 @@ export interface LeadActivity {
 import Button from "../form/Button";
 import Tooltip from "../form/Tooltip";
 import { useModalBehavior } from "../form/useModalBehavior";
+import { CardListSkeleton } from "../shared/Skeletons";
 import LeadNotesTimeline from "./LeadNotesTimeline";
 import { LeadStatusIcon, formatCalendarDate, formatCents, formatDate, formatDateTime, formatPhone, qualificationTextColors } from "./leadVisuals";
 
@@ -316,7 +317,7 @@ export default function LeadDetailsDrawer({
             {activityError ? (
               <p className="mt-3 text-sm text-admin-text-hint">Não foi possível carregar o histórico.</p>
             ) : !sentEmails ? (
-              <p className="mt-3 text-sm text-admin-text-hint">Carregando...</p>
+              <CardListSkeleton />
             ) : sentEmails.length === 0 ? (
               <p className="mt-3 text-sm text-admin-text-hint">Nenhum e-mail enviado pelo CRM ainda.</p>
             ) : (

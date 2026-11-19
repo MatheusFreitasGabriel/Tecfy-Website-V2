@@ -1,5 +1,6 @@
-import { ListSkeleton } from "@/app/components/admin/shared/Skeletons";
+import { LeadsSkeleton } from "@/app/components/admin/shared/Skeletons";
 
+/** Aparece na hora ao abrir a tela de Leads, com o mesmo layout, enquanto os dados chegam. */
 export default function Loading() {
-  return <ListSkeleton label="leads" filters={4} />;
+  return <LeadsSkeleton />;
 }

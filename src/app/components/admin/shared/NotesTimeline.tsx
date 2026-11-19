@@ -6,6 +6,7 @@ import type { LeadNoteRow } from "@/lib/admin/crm/types";
 import { NOTE_MAX_LENGTH, validateNoteText } from "@/lib/admin/crm/validation";
 import Button from "../form/Button";
 import { formatDateTime } from "../leads/leadVisuals";
+import { TimelineSkeleton } from "./Skeletons";
 
 interface NotesTimelineProps {
   /** URL do POST que grava a observação (`…/notes`). */
@@ -123,7 +124,7 @@ export default function NotesTimeline({ postUrl, initial, notes, loadError, onRe
           </button>
         </p>
       ) : notes === null ? (
-        <p className="text-sm text-admin-text-hint">Carregando observações...</p>
+        <TimelineSkeleton />
       ) : items.length === 0 ? (
         <p className="text-sm text-admin-text-hint">Nenhuma observação ainda. A primeira fica registrada com seu nome e o horário.</p>
       ) : (
