@@ -206,6 +206,14 @@ the 409 branch in `Form.tsx` is now unused).
   private bucket) via 5-min signed PUT (`x-goog-content-length-range`) → `POST …/files/[fileId]` re-checks size, magic
   bytes (PDF / OOXML zip) and SHA-256 (dedupe per deal) on the server; downloads are 5-min signed URLs, logged in
   history. Bucket CORS: `scripts/storage-setup.mjs`. Queries here use equality filters only (no composite indexes).
+- **Tasks** (`crm/tasks.ts`, `/tarefas`, UI in `components/admin/tasks/`): a task links to a deal, lead, contact,
+  company or nothing (`parent_type/parent_id/parent_label`; legacy tasks only have `deal_id`). Every action is
+  logged on the parent (deal → `history`; lead/contact/company → system note), reading the parent inside the
+  transaction so nothing is written under a deleted parent. Recurrence: completing creates the next occurrence in
+  the SAME transaction and stores `next_task_id` (double complete never duplicates); `nextOccurrence` keeps the
+  Brasília time and jumps over long overdue periods. Screen data = `getCachedTasks()` (open tasks paged by doc id +
+  done in the last 60 days, tag `crm-tasks`); bulk ops ≤100 (`POST …/api/crm/tasks/bulk`). The bell gets a per-user
+  summary (overdue/today/reminders) from that cache and fires reminders client-side (toast + browser Notification).
 - Message templates: built-ins in code (`BUILTIN_TEMPLATES`, read-only) + custom ones in
   `message_templates` (`POST …/api/crm/templates`).
 - `scripts/crm-setup.mjs migrate-leads [--apply]` converts pre-v2 website leads (dry-run by default).

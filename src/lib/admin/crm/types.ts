@@ -9,6 +9,8 @@
  * companies/{id}  — empresa (cliente ou prospect).
  */
 import type {
+  TaskParentType,
+  TaskRecurrenceFreq,
   CustomFieldType,
   DealOrigin,
   DealStatus,
@@ -396,9 +398,30 @@ export interface DealRow {
 }
 
 /** Tarefa (lista/calendário). */
+export interface TaskRecurrence {
+  freq: TaskRecurrenceFreq;
+  /** "A cada N dias" (nos outros, 1). */
+  interval: number;
+}
+
+/** Vínculo da tarefa (nome guardado na própria tarefa: a lista não busca cada vínculo). */
+export interface TaskParent {
+  type: TaskParentType;
+  id: string;
+  label: string;
+}
+
 export interface TaskRow {
   id: string;
+  /** Negociação da tarefa (compatibilidade: = parent.id quando o vínculo é negociação). */
   deal_id: string | null;
+  parent: TaskParent | null;
+  recurrence: TaskRecurrence | null;
+  /** Lembrete: minutos antes do horário (null = sem lembrete). */
+  remind_minutes: number | null;
+  /** Próxima ocorrência criada ao concluir (recorrente). */
+  next_task_id: string | null;
+  created_by_name: string | null;
   title: string;
   type: TaskType;
   /** ISO (data e hora). */

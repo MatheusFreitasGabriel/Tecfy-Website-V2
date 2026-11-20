@@ -2,8 +2,8 @@
  * Validação de quadros, funis, negociações e tarefas (cliente e servidor — o servidor sempre revalida).
  * Módulo puro, sem Firebase.
  */
-import { customFieldTypes, dealStatuses, stageColors, taskTypes, type DealStatus } from "./options";
-import { MAX_CUSTOM_FIELDS, MAX_STAGES, type CustomField, type Pipeline, type PipelineStage } from "./types";
+import { customFieldTypes, dealStatuses, stageColors, taskParents, taskRecurrences, taskReminders, taskTypes, type DealStatus } from "./options";
+import { MAX_CUSTOM_FIELDS, MAX_STAGES, type CustomField, type Pipeline, type PipelineStage, type TaskRecurrence } from "./types";
 import { parseCurrencyToCents, type FieldErrors, type Result } from "./validation";
 
 const str = (v: unknown): string => (typeof v === "string" ? v : "");
@@ -375,7 +375,17 @@ export function parseBulkDeals(body: Record<string, unknown>): BulkDealAction | 
 // ── Tarefas ──
 
 export interface TaskForm {
+  /** Atalho antigo: tarefa da negociação (= parent_type "deal"). */
   deal_id: string;
+  /** "" = avulsa; deal | lead | contact | company. */
+  parent_type?: string;
+  parent_id?: string;
+  /** "" = não repete. */
+  recurrence?: string;
+  /** Para "a cada N dias". */
+  recurrence_interval?: string;
+  /** "" = sem lembrete; minutos antes. */
+  remind_minutes?: string;
   title: string;
   type: string;
   /** "YYYY-MM-DD" */
@@ -388,6 +398,10 @@ export interface TaskForm {
 
 export interface TaskData {
   deal_id: string | null;
+  /** Vínculo (negociação/lead/contato/empresa) — null = avulsa. */
+  parent?: { type: "deal" | "lead" | "contact" | "company"; id: string } | null;
+  recurrence?: TaskRecurrence | null;
+  remind_minutes?: number | null;
   title: string;
   type: string;
   /** Instante (horário de Brasília → UTC). */
@@ -417,8 +431,39 @@ export function validateTaskForm(input: Partial<TaskForm>, ownerUids: string[]):
   if (notes.length > 2000) errors.notes = "Use até 2.000 caracteres.";
   const dealId = input.deal_id ? (isDocId(input.deal_id) ? input.deal_id : undefined) : null;
   if (dealId === undefined) errors.deal_id = "Negociação inválida.";
+  // Vínculo: explícito (parent_type/parent_id) ou o atalho deal_id.
+  let parent: TaskData["parent"] = null;
+  if (input.parent_type) {
+    if (!taskParents.is(input.parent_type) || !isDocId(input.parent_id)) errors.parent_id = "Escolha o vínculo.";
+    else parent = { type: input.parent_type, id: input.parent_id };
+  } else if (dealId) parent = { type: "deal", id: dealId };
+  let recurrence: TaskRecurrence | null = null;
+  if (input.recurrence) {
+    const interval = input.recurrence === "every_n_days" ? Number(input.recurrence_interval) : 1;
+    if (!taskRecurrences.is(input.recurrence)) errors.recurrence = "Repetição inválida.";
+    else if (!Number.isInteger(interval) || interval < 1 || interval > 365) errors.recurrence_interval = "Use de 1 a 365 dias.";
+    else recurrence = { freq: input.recurrence, interval };
+  }
+  let remind: number | null = null;
+  if (input.remind_minutes !== undefined && input.remind_minutes !== "") {
+    if (!taskReminders.is(String(input.remind_minutes))) errors.remind_minutes = "Lembrete inválido.";
+    else remind = Number(input.remind_minutes);
+  }
   if (Object.keys(errors).length) return { ok: false, errors };
-  return { ok: true, value: { deal_id: dealId ?? null, title, type: input.type as string, due_at: brazilDateTime(date, time), assignee_uid: assignee, notes: notes || null } };
+  return {
+    ok: true,
+    value: {
+      deal_id: parent?.type === "deal" ? parent.id : null,
+      parent,
+      recurrence,
+      remind_minutes: remind,
+      title,
+      type: input.type as string,
+      due_at: brazilDateTime(date, time),
+      assignee_uid: assignee,
+      notes: notes || null,
+    },
+  };
 }
 
 // ── Página da negociação: edição, venda, perda, registros, arquivos ──

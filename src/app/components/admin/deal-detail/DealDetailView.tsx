@@ -181,9 +181,10 @@ export default function DealDetailView(props: DealDetailViewProps) {
   const setTaskDone = async (task: TaskRow, done: boolean) => {
     setTasks((all) => all.map((t) => (t.id === task.id ? { ...t, done_at: done ? new Date().toISOString() : null } : t)));
     try {
-      const { ok, status, data } = await callApi<{ task: TaskRow }>(`${basePath}/api/crm/tasks/${task.id}`, "PATCH", { done });
+      const { ok, status, data } = await callApi<{ task: TaskRow; next: TaskRow | null }>(`${basePath}/api/crm/tasks/${task.id}`, "PATCH", { done });
       if (!ok) throw new Error(apiErrorMessage(status, data.error));
-      setTasks((all) => all.map((t) => (t.id === task.id ? data.task : t)));
+      // Recorrente: a próxima ocorrência aparece na hora.
+      setTasks((all) => [...all.map((t) => (t.id === task.id ? data.task : t)), ...(data.next && !all.some((t) => t.id === data.next!.id) ? [data.next] : [])].sort((x, y) => x.due_at.localeCompare(y.due_at)));
       void reloadHistory();
     } catch (error) {
       setTasks((all) => all.map((t) => (t.id === task.id ? task : t)));

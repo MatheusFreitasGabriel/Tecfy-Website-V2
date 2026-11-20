@@ -710,56 +710,8 @@ export async function deleteDeal(id: string, actor: Actor): Promise<{ leadId: st
   return result;
 }
 
-// ── Tarefas: editar / reagendar / excluir ────────────────────────────────────
-
-const dueBr = (d: Date) =>
-  new Intl.DateTimeFormat("pt-BR", { timeZone: "America/Sao_Paulo", day: "2-digit", month: "2-digit", year: "numeric", hour: "2-digit", minute: "2-digit" }).format(d);
-
-export class TaskNotFoundError extends Error {
-  constructor() {
-    super("task_not_found");
-  }
-}
-
-/** Edita a tarefa (título, tipo, data/hora, responsável, observações). Mudança de data = "reagendada". */
-export async function updateTask(id: string, data: { title: string; type: string; due_at: Date; notes: string | null }, assignee: Actor, actor: Actor): Promise<void> {
-  const db = getAdminDb();
-  const ref = db.collection(TASKS_COLLECTION).doc(id);
-  await db.runTransaction(async (tx) => {
-    const snap = await tx.get(ref);
-    if (!snap.exists) throw new TaskNotFoundError();
-    const before = (snap.get("due_at") as Timestamp | undefined)?.toDate();
-    const rescheduled = before && before.getTime() !== data.due_at.getTime();
-    tx.update(ref, {
-      title: data.title,
-      type: data.type,
-      due_at: Timestamp.fromDate(data.due_at),
-      notes: data.notes,
-      assignee_uid: assignee.uid,
-      assignee_name: assignee.name,
-      updated_at: FieldValue.serverTimestamp(),
-    });
-    const dealId = str(snap.get("deal_id"));
-    if (dealId) {
-      tx.create(
-        db.collection(DEALS_COLLECTION).doc(dealId).collection(DEAL_HISTORY_SUBCOLLECTION).doc(),
-        historyData("task", rescheduled ? "Tarefa reagendada" : "Tarefa alterada", `${data.title}${rescheduled && before ? ` · ${dueBr(before)} → ${dueBr(data.due_at)}` : ""} · ${assignee.name}`, actor, { task_id: id }),
-      );
-    }
-  }, { maxAttempts: MAX_ATTEMPTS });
-}
-
-export async function deleteTask(id: string, actor: Actor): Promise<void> {
-  const db = getAdminDb();
-  const ref = db.collection(TASKS_COLLECTION).doc(id);
-  await db.runTransaction(async (tx) => {
-    const snap = await tx.get(ref);
-    if (!snap.exists) throw new TaskNotFoundError();
-    tx.delete(ref);
-    const dealId = str(snap.get("deal_id"));
-    if (dealId) tx.create(db.collection(DEALS_COLLECTION).doc(dealId).collection(DEAL_HISTORY_SUBCOLLECTION).doc(), historyData("task", "Tarefa excluída", String(snap.get("title") ?? ""), actor));
-  }, { maxAttempts: MAX_ATTEMPTS });
-}
+// ── Tarefas (módulo próprio: crm/tasks.ts) ──
+export { TaskNotFoundError, deleteTask, updateTask } from "./tasks";
 
 // ── Mover para outro funil ───────────────────────────────────────────────────
 

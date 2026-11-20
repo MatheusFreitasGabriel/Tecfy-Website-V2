@@ -173,7 +173,8 @@ function TaskItem({ task, overdue, onToggle, onEdit, onDelete }: { task: TaskRow
         checked={done}
         onChange={(e) => onToggle(task, e.target.checked)}
         aria-label={done ? `Reabrir: ${task.title}` : `Concluir: ${task.title}`}
-        className="mt-0.5 h-4 w-4 shrink-0 cursor-pointer accent-admin-primary"
+        data-variant="round"
+        className="mt-0.5 h-5 w-5 shrink-0"
       />
       <div className="min-w-0 flex-1">
         <p className={`text-sm font-semibold ${done ? "text-admin-text-hint line-through" : "text-text-primary"}`}>{task.title}</p>

@@ -708,7 +708,10 @@ await scenario("21. Lista com 2.000 negociações em páginas (metade com o MESM
   do {
     const page = await dealsLib.listDealsPage(cursor);
     biggest = Math.max(biggest, Math.round(JSON.stringify(page.rows).length / 1024));
-    for (const r of page.rows) (seen.has(r.id) ? dup++ : seen.add(r.id));
+    for (const r of page.rows) {
+      if (seen.has(r.id)) dup++;
+      else seen.add(r.id);
+    }
     cursor = page.next;
   } while (cursor);
   check(seen.size === 2000 && dup === 0, `${seen.size} distintas, ${dup} repetidas`);
@@ -740,7 +743,7 @@ await scenario("22. 300 tarefas simultâneas em 30 negociações + 100 conclusõ
   check(total === 30 + 300 + 100, `histórico: 30 criações + 300 tarefas + 100 conclusões, sem duplicar (${total})`);
   const ghost = await dealsLib.createTask({ deal_id: "nao_existe", title: "x", type: "outro", due_at: due, assignee_uid: OWNER.uid, notes: null }, OWNER, ACTOR).then(
     () => false,
-    (e) => e instanceof dealsLib.DealNotFoundError,
+    (e) => e.message === "parent_not_found",
   );
   check(ghost, "tarefa em negociação inexistente é recusada");
   return 0;
@@ -1027,9 +1030,10 @@ await scenario("32. Custo de cada função (leituras/gravações no Firestore) d
     return detailLib.updateDeal(id, v, { stage_id: pipeline.stages[2].id }, null, ACTOR);
   });
   const task = await measure("Criar tarefa", { reads: 2, writes: 2 }, () => dealsLib.createTask({ deal_id: id, title: "Ligar", type: "ligacao", due_at: brazilDateTime("2030-02-01", "09:00"), assignee_uid: OWNER.uid, notes: null }, OWNER, ACTOR));
-  await measure("Reagendar tarefa", { reads: 1, writes: 2 }, () => detailLib.updateTask(task.id, { title: "Ligar", type: "ligacao", due_at: brazilDateTime("2030-02-02", "09:00"), notes: null }, OWNER, ACTOR));
-  await measure("Concluir tarefa", { reads: 2, writes: 2 }, () => dealsLib.setTaskDone(task.id, true, ACTOR));
-  await measure("Excluir tarefa", { reads: 1, writes: 2 }, () => detailLib.deleteTask(task.id, ACTOR));
+  // Tarefas leem também o vínculo (para registrar no histórico certo, nunca num vínculo apagado).
+  await measure("Reagendar tarefa", { reads: 2, writes: 2 }, () => detailLib.updateTask(task.id, { title: "Ligar", type: "ligacao", due_at: brazilDateTime("2030-02-02", "09:00"), notes: null }, OWNER, ACTOR));
+  await measure("Concluir tarefa", { reads: 3, writes: 2 }, () => dealsLib.setTaskDone(task.id, true, ACTOR));
+  await measure("Excluir tarefa", { reads: 2, writes: 2 }, () => detailLib.deleteTask(task.id, ACTOR));
   await measure("Registrar observação / WhatsApp", { reads: 0, writes: 2 }, () => detailLib.logDealActivity(id, "whatsapp", "Conversa aberta", ACTOR));
   await measure("Pausar com data (cria tarefa)", { reads: 1, writes: 4 }, () => detailLib.pauseDeal(id, { reason: "Férias", resume_date: "2030-01-30" }, ACTOR));
   await measure("Retomar", { reads: 1, writes: 2 }, () => detailLib.resumeDeal(id, ACTOR));
@@ -1208,6 +1212,134 @@ await scenario("36. Entradas maliciosas em todas as validações (tipos, tamanho
   check(unsafe === 0, `texto livre sempre limpo e limitado (${unsafe} fora do padrão)`);
   const ok = v.parseMoveDeal({ deal_id: "abc", stage_id: "qualific", position: 1.5, version: 2 });
   check(ok !== null, "entrada válida continua aceita");
+  return 0;
+});
+
+// ── Tela de Tarefas: recorrência, vínculos, ações em massa, listagem ─────────
+
+const tasksLib = await import("../../src/lib/admin/crm/tasks");
+
+await scenario("37. Recorrência: 20 conclusões simultâneas → 1 próxima; datas certas (diária, dias úteis, semanal, mensal, a cada N)", async (check) => {
+  const at = (date: string, time = "10:00") => brazilDateTime(date, time);
+  const br = (d: Date) => new Intl.DateTimeFormat("en-CA", { timeZone: "America/Sao_Paulo", year: "numeric", month: "2-digit", day: "2-digit", hour: "2-digit", minute: "2-digit", hourCycle: "h23" }).format(d).replace(",", "");
+  const far = new Date("2000-01-01T00:00:00Z");
+  check(br(tasksLib.nextOccurrence(at("2030-01-10"), { freq: "daily", interval: 1 }, far)) === "2030-01-11 10:00", "diária: dia seguinte, mesmo horário");
+  check(br(tasksLib.nextOccurrence(at("2030-01-11"), { freq: "weekdays", interval: 1 }, far)) === "2030-01-14 10:00", "dias úteis: sexta → segunda");
+  check(br(tasksLib.nextOccurrence(at("2030-01-10"), { freq: "weekly", interval: 1 }, far)) === "2030-01-17 10:00", "semanal: +7 dias");
+  check(br(tasksLib.nextOccurrence(at("2030-01-31"), { freq: "monthly", interval: 1 }, far)) === "2030-02-28 10:00", "mensal: 31/jan → 28/fev (mês curto)");
+  check(br(tasksLib.nextOccurrence(at("2030-01-10"), { freq: "every_n_days", interval: 3 }, far)) === "2030-01-13 10:00", "a cada 3 dias");
+  const late = tasksLib.nextOccurrence(at("2020-01-01", "09:00"), { freq: "daily", interval: 1 });
+  check(late > new Date() && br(late).endsWith("09:00"), "atrasada há anos: a próxima já cai no futuro, no mesmo horário");
+
+  const t = await tasksLib.createTask({ deal_id: null, parent: null, recurrence: { freq: "weekly", interval: 1 }, remind_minutes: 15, title: "Semanal", type: "ligacao", due_at: at("2030-03-04", "08:30"), assignee_uid: OWNER.uid, notes: null }, OWNER, ACTOR);
+  const { failed } = await concurrently(Array.from({ length: 20 }, () => () => tasksLib.setTaskDone(t.id, true, ACTOR)));
+  check(failed.length === 0, `20 cliques em "concluir" sem erro (${failed.length})`);
+  const all = await db.collection("tasks").get();
+  const open = all.docs.filter((d) => d.get("done") === false);
+  check(all.size === 2 && open.length === 1, `exatamente 1 próxima criada (${all.size - 1})`);
+  check(br(open[0].get("due_at").toDate()) === "2030-03-11 08:30" && open[0].get("remind_minutes") === 15, "próxima: +7 dias, mesmo horário e mesmo lembrete");
+  await tasksLib.setTaskDone(t.id, false, ACTOR);
+  await tasksLib.setTaskDone(t.id, true, ACTOR);
+  check((await db.collection("tasks").get()).size === 2, "reabrir e concluir de novo não cria outra");
+  return 0;
+});
+
+await scenario("38. Vínculos: negociação → histórico; lead/contato/empresa → observação; avulsa; vínculo inexistente recusado", async (check) => {
+  const pipeline = await defaultPipeline();
+  const contactId = await seedContact("Vínculo");
+  const companyId = await seedCompany("Vínculo SA");
+  const [leadId] = await seedLeads(1);
+  const { id: dealId } = await dealsLib.createDeal({ request_id: randomUUID(), deal: dealCore(pipeline, "Vínculo"), custom: {}, contact_id: contactId, company_id: null }, OWNER, ACTOR);
+  const due = brazilDateTime("2030-05-05", "14:00");
+  const make = (parent: { type: "deal" | "lead" | "contact" | "company"; id: string } | null) =>
+    tasksLib.createTask({ deal_id: null, parent, recurrence: null, remind_minutes: null, title: `T ${parent?.type ?? "avulsa"}`, type: "follow_up", due_at: due, assignee_uid: OWNER.uid, notes: null }, OWNER, ACTOR);
+  const [td, tl, tc, te, ta] = await Promise.all([make({ type: "deal", id: dealId }), make({ type: "lead", id: leadId }), make({ type: "contact", id: contactId }), make({ type: "company", id: companyId }), make(null)]);
+  check(td.parent?.label === "Vínculo" && td.deal_id === dealId, "tarefa da negociação guarda o nome e o deal_id");
+  check(tl.parent?.type === "lead" && tc.parent?.label === "Vínculo" && te.parent?.label === "Vínculo SA" && ta.parent === null, "lead, contato, empresa e avulsa com o vínculo certo");
+  const notes = async (col: string, id: string) => (await db.collection(`${col}/${id}/notes`).get()).docs.map((d) => String(d.get("text") ?? ""));
+  check((await notes("leads", leadId)).some((t) => t.startsWith("Tarefa criada")), "lead ganhou a observação automática");
+  check((await notes("contacts", contactId)).some((t) => t.startsWith("Tarefa criada")), "contato ganhou a observação automática");
+  check((await notes("companies", companyId)).some((t) => t.startsWith("Tarefa criada")), "empresa ganhou a observação automática");
+  check((await detailLib.listDealHistory(dealId)).some((h) => h.title === "Tarefa criada"), "negociação registrou no histórico");
+  await tasksLib.setTaskDone(tl.id, true, ACTOR);
+  check((await notes("leads", leadId)).some((t) => t.startsWith("Tarefa concluída")), "concluir também registra no vínculo");
+  const ghost = await make({ type: "company", id: "nao_existe" }).then(() => "ok", (e) => e.message);
+  check(ghost === "parent_not_found", "vínculo inexistente é recusado");
+  // Vínculo excluído depois: a tarefa continua funcionando (sem registrar em lugar nenhum).
+  await db.collection("contacts").doc(contactId).delete();
+  const afterDelete = await tasksLib.setTaskDone(tc.id, true, ACTOR).then((r) => (r ? "ok" : "null"), (e) => e.message);
+  check(afterDelete === "ok", "concluir tarefa de um contato que foi apagado funciona");
+  return 0;
+});
+
+await scenario("39. Ações em massa em 100 tarefas (concluir com recorrentes, reagendar, mover, atribuir, excluir) + concorrência", async (check) => {
+  const due = brazilDateTime("2030-06-10", "09:15");
+  const created = await Promise.all(
+    Array.from({ length: 100 }, (_, i) =>
+      tasksLib.createTask({ deal_id: null, parent: null, recurrence: i % 10 === 0 ? { freq: "daily", interval: 1 } : null, remind_minutes: null, title: `M${i}`, type: "outro", due_at: due, assignee_uid: OWNER.uid, notes: null }, OWNER, ACTOR),
+    ),
+  );
+  const ids = created.map((t) => t.id);
+  const shifted = await tasksLib.bulkTasks({ action: "shift", ids, days: 2 }, ACTOR);
+  check(shifted.length === 100, "+2 dias em 100");
+  const sample = (await db.collection("tasks").doc(ids[5]).get()).get("due_at").toDate();
+  check(sample.toISOString() === brazilDateTime("2030-06-12", "09:15").toISOString(), "reagendar mantém o horário (09:15)");
+  await tasksLib.bulkTasks({ action: "move_to", ids: ids.slice(0, 50), date: "2030-07-01" }, ACTOR);
+  check((await db.collection("tasks").doc(ids[3]).get()).get("due_at").toDate().toISOString() === brazilDateTime("2030-07-01", "09:15").toISOString(), "mover para 01/07 mantém o horário");
+  await tasksLib.bulkTasks({ action: "assign", ids, assignee: ACTOR }, ACTOR);
+  check((await db.collection("tasks").where("assignee_uid", "==", ACTOR.uid).get()).size === 100, "100 atribuídas a outra pessoa");
+  const { failed } = await concurrently<unknown>([() => tasksLib.bulkTasks({ action: "complete", ids }, ACTOR), () => tasksLib.bulkTasks({ action: "complete", ids }, ACTOR), ...ids.slice(0, 20).map((id) => () => tasksLib.setTaskDone(id, true, ACTOR))]);
+  check(failed.length === 0, `concluir em massa 2× + 20 individuais ao mesmo tempo sem erro (${failed.length})`);
+  const total = (await db.collection("tasks").get()).size;
+  check(total === 110, `as 10 recorrentes geraram exatamente 10 próximas (${total - 100})`);
+  const deleted = await tasksLib.bulkTasks({ action: "delete", ids: ids.slice(50) }, ACTOR);
+  check(deleted.length === 50 && (await db.collection("tasks").get()).size === 60, "excluir 50 em massa");
+  check(tasksLib.parseBulkTasks({ ids, action: "move_to", value: "2030-02-30" }) === null, "data inexistente é recusada");
+  check(tasksLib.parseBulkTasks({ ids: Array.from({ length: 101 }, (_, i) => `t${i}`), action: "complete" }) === null, "mais de 100 por vez é recusado");
+  return 0;
+});
+
+await scenario("40. Lista de tarefas: 4.000 abertas em páginas (sem repetir) + concluídas recentes + custo", async (check, info) => {
+  for (let i = 0; i < 4000; i += 400) {
+    const batch = db.batch();
+    for (let j = i; j < i + 400; j++) batch.set(db.collection("tasks").doc(), { title: `L${j}`, type: "outro", done: false, done_at: null, due_at: new Date(Date.now() + j * 60_000), assignee_uid: OWNER.uid, created_at: new Date() });
+    await batch.commit();
+  }
+  const batch = db.batch();
+  for (let j = 0; j < 100; j++) batch.set(db.collection("tasks").doc(), { title: `D${j}`, type: "outro", done: true, done_at: new Date(Date.now() - j * 3_600_000), due_at: new Date(), assignee_uid: OWNER.uid, created_at: new Date() });
+  await batch.commit();
+  const seen = new Set<string>();
+  let dup = 0;
+  let after: string | null = null;
+  let biggest = 0;
+  const t = performance.now();
+  do {
+    const page: { rows: { id: string }[]; next: string | null } = await tasksLib.listOpenTasksPage(after);
+    biggest = Math.max(biggest, Math.round(JSON.stringify(page.rows).length / 1024));
+    for (const r of page.rows) {
+      if (seen.has(r.id)) dup++;
+      else seen.add(r.id);
+    }
+    after = page.next;
+  } while (after);
+  check(seen.size === 4000 && dup === 0, `${seen.size} abertas distintas, ${dup} repetidas`);
+  check(biggest < 2048, `maior página ${biggest} KB (< 2 MB do cache)`);
+  const done = await tasksLib.listRecentDoneTasks();
+  check(done.length === 100, `concluídas recentes: ${done.length}`);
+  info(`lista completa em ${Math.round(performance.now() - t)} ms`);
+  await measure("Tarefas: criar com vínculo (empresa)", { reads: 2, writes: 2 }, async () => {
+    const companyId = await seedCompany("Custo T");
+    ops.reads = 0;
+    ops.writes = 0;
+    return tasksLib.createTask({ deal_id: null, parent: { type: "company", id: companyId }, recurrence: null, remind_minutes: 15, title: "c", type: "outro", due_at: new Date(), assignee_uid: OWNER.uid, notes: null }, OWNER, ACTOR);
+  });
+  await measure("Tarefas: concluir recorrente (cria a próxima)", { reads: 2, writes: 3 }, async () => {
+    const r = await tasksLib.createTask({ deal_id: null, parent: null, recurrence: { freq: "daily", interval: 1 }, remind_minutes: null, title: "r", type: "outro", due_at: new Date(), assignee_uid: OWNER.uid, notes: null }, OWNER, ACTOR);
+    ops.reads = 0;
+    ops.writes = 0;
+    return tasksLib.setTaskDone(r.id, true, ACTOR);
+  });
+  for (const c of costs.slice(-2)) check(c.reads <= c.budget.reads && c.writes <= c.budget.writes, `${c.name}: ${c.reads} leitura(s), ${c.writes} gravação(ões)`);
   return 0;
 });
 

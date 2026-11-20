@@ -2,6 +2,32 @@ import { hasValidAdminGate } from "@/lib/admin/gate";
 import { readGuardedJson } from "@/lib/admin/requestContext";
 import { getAdminSession } from "@/lib/admin/session";
 import { listNotifications, markNotificationsRead } from "@/lib/admin/notifications";
+import { getCachedTasks } from "@/lib/admin/crm/cache";
+
+const brazilDay = new Intl.DateTimeFormat("en-CA", { timeZone: "America/Sao_Paulo", year: "numeric", month: "2-digit", day: "2-digit" });
+
+/**
+ * Resumo das tarefas ABERTAS do usuário para o sino: atrasadas, de hoje e lembretes das próximas 24 h.
+ * Vem do cache das tarefas (não lê o Firestore a cada consulta do sino).
+ */
+async function taskSummary(uid: string) {
+  const now = Date.now();
+  const today = brazilDay.format(new Date(now));
+  const { tasks } = await getCachedTasks();
+  const mine = tasks.filter((t) => !t.done_at && t.assignee_uid === uid);
+  let overdue = 0;
+  let dueToday = 0;
+  const reminders: { id: string; title: string; due_at: string; remind_at: string; parent_label: string | null }[] = [];
+  for (const t of mine) {
+    const due = Date.parse(t.due_at);
+    if (due < now) overdue++;
+    else if (brazilDay.format(new Date(due)) === today) dueToday++;
+    if (t.remind_minutes !== null && due > now - 5 * 60_000 && due < now + 26 * 3_600_000) {
+      reminders.push({ id: t.id, title: t.title, due_at: t.due_at, remind_at: new Date(due - t.remind_minutes * 60_000).toISOString(), parent_label: t.parent?.label ?? null });
+    }
+  }
+  return { overdue, today: dueToday, reminders: reminders.sort((a, b) => a.remind_at.localeCompare(b.remind_at)).slice(0, 50) };
+}
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -21,7 +47,8 @@ export async function GET(request: Request) {
     const sinceParam = new URL(request.url).searchParams.get("since");
     const since = sinceParam ? new Date(sinceParam) : undefined;
     if (since && Number.isNaN(since.getTime())) return Response.json({ error: "invalid_input" }, { status: 400 });
-    return Response.json(await listNotifications(session.uid, since));
+    const [list, tasks] = await Promise.all([listNotifications(session.uid, since), taskSummary(session.uid).catch(() => null)]);
+    return Response.json({ ...list, tasks });
   } catch (error) {
     console.error("notifications list error", error instanceof Error ? error.message : "unknown");
     return Response.json({ error: "internal_error" }, { status: 500 });

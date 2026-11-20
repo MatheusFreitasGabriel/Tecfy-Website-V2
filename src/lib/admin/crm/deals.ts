@@ -1,7 +1,7 @@
 import "server-only";
 import { FieldPath, FieldValue, Timestamp, type DocumentReference, type DocumentSnapshot, type Firestore, type Transaction } from "firebase-admin/firestore";
 import { getAdminDb } from "@/lib/firebaseAdmin";
-import { dealOrigins, dealStatuses, leadSources, STARS_FROM_LEAD_QUALIFICATION, leadQualifications, taskTypes, type DealStatus } from "./options";
+import { dealOrigins, dealStatuses, leadSources, STARS_FROM_LEAD_QUALIFICATION, leadQualifications, type DealStatus } from "./options";
 import {
   BOARDS_COLLECTION,
   COMPANIES_COLLECTION,
@@ -17,9 +17,8 @@ import {
   type DealRow,
   type Pipeline,
   type PipelineStage,
-  type TaskRow,
 } from "./types";
-import { validateCustomValues, type BulkDealAction, type CustomValues, type DealCoreData, type MoveDealInput, type PipelineData, type TaskData } from "./dealValidation";
+import { validateCustomValues, type BulkDealAction, type CustomValues, type DealCoreData, type MoveDealInput, type PipelineData } from "./dealValidation";
 import { systemNoteData } from "./notes";
 import type { Actor } from "./leads";
 
@@ -105,10 +104,8 @@ export function stageExitPatch(snap: DocumentSnapshot, fromStage: string | null 
   return ms ? { [`stage_time.${fromStage}`]: FieldValue.increment(ms) } : {};
 }
 
-/** Registro do histórico da negociação (só acrescenta). */
-export function historyData(type: string, title: string, description: string | null, actor: { uid: string | null; name: string }, meta: Record<string, unknown> = {}) {
-  return { type, title, description, meta, author_uid: actor.uid, author_name: actor.name, created_at: FieldValue.serverTimestamp() };
-}
+import { historyData } from "./history";
+export { historyData };
 const historyRef = (deal: DocumentReference) => deal.collection(DEAL_HISTORY_SUBCOLLECTION).doc();
 
 // ── Quadros e funis ──────────────────────────────────────────────────────────
@@ -602,80 +599,8 @@ export async function bulkUpdateDeals(action: BulkDealAction, owner: Actor | nul
   }, { maxAttempts: MAX_ATTEMPTS });
 }
 
-// ── Tarefas ──────────────────────────────────────────────────────────────────
-
-function toTaskRow(doc: DocumentSnapshot): TaskRow {
-  const d = doc.data() ?? {};
-  return {
-    id: doc.id,
-    deal_id: str(d.deal_id),
-    title: str(d.title) ?? "Tarefa",
-    type: taskTypes.is(d.type) ? d.type : "outro",
-    due_at: iso(d.due_at) ?? new Date(0).toISOString(),
-    done_at: iso(d.done_at),
-    assignee_uid: str(d.assignee_uid),
-    assignee_name: str(d.assignee_name),
-    notes: str(d.notes),
-    created_at: iso(d.created_at),
-  };
-}
-
-const formatDue = (date: Date) =>
-  new Intl.DateTimeFormat("pt-BR", { timeZone: "America/Sao_Paulo", day: "2-digit", month: "2-digit", year: "numeric", hour: "2-digit", minute: "2-digit" }).format(date);
-
-/** Cria a tarefa (e registra no histórico da negociação, se tiver). */
-export async function createTask(data: TaskData, assignee: Actor, actor: Actor): Promise<TaskRow> {
-  const db = getAdminDb();
-  const ref = db.collection(TASKS_COLLECTION).doc();
-  await db.runTransaction(async (tx) => {
-    const dealRef = data.deal_id ? db.collection(DEALS_COLLECTION).doc(data.deal_id) : null;
-    if (dealRef && !(await tx.get(dealRef)).exists) throw new DealNotFoundError();
-    const now = FieldValue.serverTimestamp();
-    tx.create(ref, {
-      deal_id: data.deal_id,
-      title: data.title,
-      type: data.type,
-      due_at: Timestamp.fromDate(data.due_at),
-      done: false,
-      done_at: null,
-      assignee_uid: assignee.uid,
-      assignee_name: assignee.name,
-      notes: data.notes,
-      created_by_uid: actor.uid,
-      created_by_name: actor.name,
-      created_at: now,
-      updated_at: now,
-    });
-    if (dealRef) {
-      tx.create(historyRef(dealRef), historyData("task", "Tarefa criada", `${taskTypes.label(data.type)}: ${data.title} · ${formatDue(data.due_at)} · ${assignee.name}`, actor, { task_id: ref.id }));
-    }
-  });
-  return toTaskRow(await ref.get());
-}
-
-/** Tarefas de uma negociação (abertas e concluídas), da mais próxima para a mais distante. */
-export async function listDealTasks(dealId: string, limit = 300): Promise<TaskRow[]> {
-  const snap = await getAdminDb().collection(TASKS_COLLECTION).where("deal_id", "==", dealId).limit(limit).get();
-  return snap.docs.map(toTaskRow).sort((a, b) => a.due_at.localeCompare(b.due_at));
-}
-
-/** Marca/desmarca como feita. Retorna a tarefa atualizada (null = não existe). */
-export async function setTaskDone(id: string, done: boolean, actor: Actor): Promise<TaskRow | null> {
-  const db = getAdminDb();
-  const ref = db.collection(TASKS_COLLECTION).doc(id);
-  const ok = await db.runTransaction(async (tx) => {
-    const snap = await tx.get(ref);
-    if (!snap.exists) return false;
-    if (snap.get("done") === done) return true;
-    tx.update(ref, { done, done_at: done ? FieldValue.serverTimestamp() : null, updated_at: FieldValue.serverTimestamp() });
-    const dealId = str(snap.get("deal_id"));
-    if (dealId) {
-      tx.create(historyRef(db.collection(DEALS_COLLECTION).doc(dealId)), historyData("task", done ? "Tarefa concluída" : "Tarefa reaberta", String(snap.get("title") ?? ""), actor, { task_id: id }));
-    }
-    return true;
-  });
-  return ok ? toTaskRow(await ref.get()) : null;
-}
+// ── Tarefas (módulo próprio: crm/tasks.ts) ──
+export { createTask, listDealTasks, setTaskDone, toTaskRow } from "./tasks";
 
 /** Estrelas iniciais da negociação a partir da qualificação do lead. */
 export function starsFromLead(qualification: unknown): number {

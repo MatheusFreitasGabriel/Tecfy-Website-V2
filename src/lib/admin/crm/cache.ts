@@ -7,7 +7,7 @@ import { CONTACTS_LIST_LIMIT, getContactDetail, listContactsPage, type PageCurso
 import type { CompanyRow, ContactRow, LeadRow } from "./types";
 import { listTemplates } from "./templatesStore";
 import { DEALS_LIST_LIMIT, listDealsPage, listOpenTaskDue, listPipelineSetup, placeDeals, type DealsCursor } from "./deals";
-import type { DealRow } from "./types";
+import type { DealRow, TaskRow } from "./types";
 
 /**
  * Cache de leitura do CRM (Next Data Cache). Abrir/atualizar a tela de Leads só lê o Firestore
@@ -194,3 +194,28 @@ export const getCachedProductOptions = unstable_cache(async () => (await import(
   tags: [CRM_TAGS.products],
   revalidate: 300,
 });
+
+// ── Tarefas ─────────────────────────────────────────────────────────────────
+
+const getCachedOpenTasksPage = unstable_cache(async (after: string) => (await import("./tasks")).listOpenTasksPage(after || null), ["crm-tasks-open-v1"], {
+  tags: [CRM_TAGS.tasks],
+  revalidate: 3600,
+});
+const getCachedDoneTasks = unstable_cache(async () => (await import("./tasks")).listRecentDoneTasks(), ["crm-tasks-done-v1"], {
+  tags: [CRM_TAGS.tasks],
+  revalidate: 3600,
+});
+
+/** Abertas (todas, até o limite) + concluídas nos últimos 60 dias. Só lê o Firestore quando algo mudou. */
+export async function getCachedTasks(): Promise<{ tasks: TaskRow[]; truncated: boolean }> {
+  const { TASKS_OPEN_LIMIT } = await import("./tasks");
+  const donePromise = getCachedDoneTasks();
+  const open: TaskRow[] = [];
+  let after: string | null = null;
+  do {
+    const page: { rows: TaskRow[]; next: string | null } = await getCachedOpenTasksPage(after ?? "");
+    open.push(...page.rows);
+    after = page.next;
+  } while (after && open.length < TASKS_OPEN_LIMIT);
+  return { tasks: [...open, ...(await donePromise)], truncated: Boolean(after) };
+}

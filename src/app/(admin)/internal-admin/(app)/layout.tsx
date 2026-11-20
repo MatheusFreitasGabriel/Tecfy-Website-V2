@@ -15,7 +15,7 @@ export default async function AdminAppLayout({ children }: Readonly<{ children: 
   const profile = await getAdminProfile(session);
 
   return (
-    <div className="flex min-h-screen w-full bg-background">
+    <div className="admin-shell flex min-h-screen w-full bg-background">
       <Sidebar basePath={basePath} email={profile.email} name={profile.name} picture={profile.picture} />
       <div className="min-w-0 flex-1">{children}</div>
     </div>

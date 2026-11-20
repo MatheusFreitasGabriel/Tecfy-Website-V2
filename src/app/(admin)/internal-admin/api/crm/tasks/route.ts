@@ -1,15 +1,28 @@
-import { CRM_TAGS, getCachedAdmins, invalidateCrm } from "@/lib/admin/crm/cache";
-import { createTask } from "@/lib/admin/crm/deals";
-import { adminByUid, dealErrorResponse, guardedWrite } from "@/lib/admin/crm/dealRoutes";
+import { CRM_TAGS, getCachedAdmins, getCachedTasks, invalidateCrm } from "@/lib/admin/crm/cache";
+import { createTask } from "@/lib/admin/crm/tasks";
+import { adminByUid, dealDetailErrorResponse, guardedWrite } from "@/lib/admin/crm/dealRoutes";
 import { validateTaskForm, type TaskForm } from "@/lib/admin/crm/dealValidation";
-import { crmResponses } from "@/lib/admin/crm/routeHelpers";
+import { crmResponses, guardRead } from "@/lib/admin/crm/routeHelpers";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
+const PARENT_TAGS = { deal: CRM_TAGS.deals, lead: CRM_TAGS.leads, contact: CRM_TAGS.contacts, company: CRM_TAGS.companies } as const;
+
+/** Tarefas da tela (abertas + concluídas nos últimos 60 dias), do cache do servidor. */
+export async function GET(request: Request) {
+  const session = await guardRead(request);
+  if (session instanceof Response) return session;
+  try {
+    return Response.json(await getCachedTasks());
+  } catch (error) {
+    return dealDetailErrorResponse(error, "list tasks");
+  }
+}
+
 /**
- * Cria uma tarefa (na negociação, se `deal_id`). Corpo: `{ task: TaskForm }`.
- * Resposta: 201 { task } · 400 { fields } · 401 · 404 (negociação não existe).
+ * Cria uma tarefa. Corpo: `{ task: TaskForm }` (vínculo opcional: negociação, lead, contato ou empresa;
+ * repetição e lembrete opcionais). Resposta: 201 { task } · 400 { fields } · 401 · 404 (vínculo não existe).
  */
 export async function POST(request: Request) {
   const guard = await guardedWrite(request, 8 * 1024);
@@ -22,9 +35,10 @@ export async function POST(request: Request) {
   if (!assignee) return crmResponses.invalid();
   try {
     const task = await createTask(parsed.value, assignee, guard.actor);
-    invalidateCrm(CRM_TAGS.tasks);
+    // A negociação mostra os vencimentos (Kanban); lead/contato/empresa ganham uma observação.
+    invalidateCrm(CRM_TAGS.tasks, task.parent ? PARENT_TAGS[task.parent.type] : null);
     return Response.json({ task }, { status: 201 });
   } catch (error) {
-    return dealErrorResponse(error, "create task");
+    return dealDetailErrorResponse(error, "create task");
   }
 }

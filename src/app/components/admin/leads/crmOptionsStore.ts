@@ -9,7 +9,7 @@ import type { PickerOption } from "@/lib/admin/crm/types";
  * requisições simultâneas são unificadas. Depois de criar um contato/empresa, `invalidate`
  * faz a próxima abertura buscar de novo (o servidor responde do cache dele).
  */
-export type OptionsType = "contacts" | "companies";
+export type OptionsType = "contacts" | "companies" | "deals" | "leads";
 
 interface Entry {
   options: PickerOption[] | null;
@@ -19,6 +19,8 @@ interface Entry {
 const state: Record<OptionsType, Entry> = {
   contacts: { options: null, error: false },
   companies: { options: null, error: false },
+  deals: { options: null, error: false },
+  leads: { options: null, error: false },
 };
 const inflight: Partial<Record<OptionsType, Promise<void>>> = {};
 const listeners = new Set<() => void>();

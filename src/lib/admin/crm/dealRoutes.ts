@@ -30,6 +30,7 @@ import {
   StorageNotConfiguredError,
 } from "./dealDetail";
 import { EmailProviderError, RecipientNotAllowedError } from "./email";
+import { TaskParentNotFoundError } from "./tasks";
 
 /** POST/PATCH do CRM: gate/origem/JSON (tamanho máx.) → sessão. Devolve o corpo + quem age. */
 export async function guardedWrite(request: Request, maxBytes = DEAL_MAX_BYTES): Promise<{ body: Record<string, unknown>; session: AdminSession; actor: Actor } | Response> {
@@ -82,6 +83,7 @@ export function dealDetailErrorResponse(error: unknown, label: string): Response
   if (error instanceof DuplicateFileError) return Response.json({ error: "duplicate_file", existing: error.existing }, { status: 409 });
   if (error instanceof FileNotFoundError || error instanceof TaskNotFoundError) return crmResponses.notFound();
   if (error instanceof DealSoldError) return Response.json({ error: "deal_sold" }, { status: 409 });
+  if (error instanceof TaskParentNotFoundError) return Response.json({ error: "parent_not_found" }, { status: 404 });
   if (error instanceof AlreadyLinkedDealError) return Response.json({ error: "already_linked" }, { status: 409 });
   if (error instanceof RecipientNotAllowedError) return crmResponses.invalid();
   if (error instanceof EmailProviderError) {

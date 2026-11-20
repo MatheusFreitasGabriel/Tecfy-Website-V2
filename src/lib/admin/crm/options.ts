@@ -248,3 +248,33 @@ export const DEAL_FILE_TYPES: Record<string, { ext: string; label: string; magic
   "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet": { ext: "xlsx", label: "Excel", magic: "zip" },
 };
 export const DEAL_FILE_MAX_BYTES = 25 * 1024 * 1024;
+
+/** A que a tarefa está ligada. */
+export const taskParents = defineOptions([
+  { value: "deal", label: "Negociação" },
+  { value: "lead", label: "Lead" },
+  { value: "contact", label: "Contato" },
+  { value: "company", label: "Empresa" },
+] as const);
+export type TaskParentType = (typeof taskParents.options)[number]["value"];
+
+/** Repetição da tarefa (ao concluir, a próxima é criada). */
+export const taskRecurrences = defineOptions([
+  { value: "daily", label: "Todo dia" },
+  { value: "weekdays", label: "Dias úteis (seg–sex)" },
+  { value: "weekly", label: "Toda semana" },
+  { value: "monthly", label: "Todo mês" },
+  { value: "every_n_days", label: "A cada N dias" },
+] as const);
+export type TaskRecurrenceFreq = (typeof taskRecurrences.options)[number]["value"];
+
+/** Lembrete antes do horário (minutos). */
+export const taskReminders = defineOptions([
+  { value: "0", label: "Na hora" },
+  { value: "5", label: "5 min antes" },
+  { value: "15", label: "15 min antes" },
+  { value: "30", label: "30 min antes" },
+  { value: "60", label: "1 hora antes" },
+  { value: "120", label: "2 horas antes" },
+  { value: "1440", label: "1 dia antes" },
+] as const);
