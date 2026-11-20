@@ -89,7 +89,8 @@ export function isAllowedOrigin(request: Request): boolean {
   const origin = request.headers.get("origin");
   if (!origin) return false;
   if (PRODUCTION_ORIGINS.includes(origin)) return true;
-  if (process.env.NODE_ENV === "production") return false;
+  // Produção só aceita localhost com ADMIN_ALLOW_LOCALHOST=1 (teste local com `npm start`; NUNCA na Vercel).
+  if (process.env.NODE_ENV === "production" && process.env.ADMIN_ALLOW_LOCALHOST !== "1") return false;
   try {
     const url = new URL(origin);
     return url.protocol === "http:" && (url.hostname === "localhost" || url.hostname === "127.0.0.1");

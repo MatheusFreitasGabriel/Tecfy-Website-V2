@@ -105,6 +105,27 @@
   --admin-tooltip: #F4F4F5;
   --admin-tooltip-text: #111111;
   --admin-whatsapp: #25D366;
+  /* Negociações: status, estrelas, Kanban e cores das etapas */
+  --admin-deal-progress: #14263A;
+  --admin-deal-progress-text: #7DD3FC;
+  --admin-deal-paused: #242424;
+  --admin-deal-paused-text: #B4B4B4;
+  --admin-deal-lost: #3A1717;
+  --admin-deal-lost-text: #FCA5A5;
+  --admin-deal-won: #12301F;
+  --admin-deal-won-text: #6EE7A0;
+  --admin-star: #FBBF24;
+  --admin-column: #0E0E0E;
+  --admin-column-border: #262626;
+  --admin-deal-card: #171717;
+  --admin-deal-card-hover: #1E1E1E;
+  --admin-stage-slate: #94A3B8;
+  --admin-stage-blue: #60A5FA;
+  --admin-stage-violet: #A78BFA;
+  --admin-stage-amber: #FBBF24;
+  --admin-stage-orange: #FB923C;
+  --admin-stage-green: #4ADE80;
+  --admin-warning: #FBBF24;
 
   /* Cores de texto */
   --text-primary: #ffffff;
@@ -221,6 +242,26 @@
   --color-admin-tooltip: var(--admin-tooltip);
   --color-admin-tooltip-text: var(--admin-tooltip-text);
   --color-admin-whatsapp: var(--admin-whatsapp);
+  --color-admin-deal-progress: var(--admin-deal-progress);
+  --color-admin-deal-progress-text: var(--admin-deal-progress-text);
+  --color-admin-deal-paused: var(--admin-deal-paused);
+  --color-admin-deal-paused-text: var(--admin-deal-paused-text);
+  --color-admin-deal-lost: var(--admin-deal-lost);
+  --color-admin-deal-lost-text: var(--admin-deal-lost-text);
+  --color-admin-deal-won: var(--admin-deal-won);
+  --color-admin-deal-won-text: var(--admin-deal-won-text);
+  --color-admin-star: var(--admin-star);
+  --color-admin-column: var(--admin-column);
+  --color-admin-column-border: var(--admin-column-border);
+  --color-admin-deal-card: var(--admin-deal-card);
+  --color-admin-deal-card-hover: var(--admin-deal-card-hover);
+  --color-admin-stage-slate: var(--admin-stage-slate);
+  --color-admin-stage-blue: var(--admin-stage-blue);
+  --color-admin-stage-violet: var(--admin-stage-violet);
+  --color-admin-stage-amber: var(--admin-stage-amber);
+  --color-admin-stage-orange: var(--admin-stage-orange);
+  --color-admin-stage-green: var(--admin-stage-green);
+  --color-admin-warning: var(--admin-warning);
   --color-text-placeholder: var(--text-input-placeholder);
 
   /* Fonts */

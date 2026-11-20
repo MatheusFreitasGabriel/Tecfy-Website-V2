@@ -58,7 +58,7 @@ export async function POST(request: Request) {
         break;
       }
     }
-    if ((response.updated as number) > 0) invalidateCrm(CRM_TAGS.leads);
+    if ((response.updated as number) > 0) invalidateCrm(CRM_TAGS.leads, parsed.action === "convert" ? CRM_TAGS.deals : null);
     return Response.json(response);
   } catch (error) {
     console.error("crm bulk leads error", parsed.action, error instanceof Error ? error.message : "unknown");

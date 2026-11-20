@@ -157,3 +157,94 @@ export const entityStatuses = defineOptions([
   { value: "inativo", label: "Inativo", hint: "Guardado para histórico, fora do dia a dia." },
 ] as const);
 export type EntityStatus = (typeof entityStatuses.options)[number]["value"];
+
+// ── Negociações ──────────────────────────────────────────────────────────────
+
+/** Status da negociação (cada um com uma cor no card: azul claro, cinza, vermelho, verde). */
+export const dealStatuses = defineOptions([
+  { value: "em_andamento", label: "Em andamento", hint: "Negociação ativa, em movimento no funil." },
+  { value: "pausada", label: "Pausada", hint: "Parada por enquanto (cliente pediu para retomar depois)." },
+  { value: "perdida", label: "Perdida", hint: "Não fechou. O motivo fica registrado." },
+  { value: "vendida", label: "Vendida", hint: "Fechou! Virou contrato e a empresa é cliente." },
+] as const);
+export type DealStatus = (typeof dealStatuses.options)[number]["value"];
+
+/** Como a negociação nasceu. */
+export const dealOrigins = defineOptions([
+  { value: "lead_website", label: "Lead do site" },
+  { value: "lead_manual", label: "Lead manual" },
+  { value: "manual", label: "Criada manualmente" },
+] as const);
+export type DealOrigin = (typeof dealOrigins.options)[number]["value"];
+
+/** Qualificação da negociação em estrelas (1 = mais baixa, 5 = mais alta). */
+export const dealQualifications = defineOptions([
+  { value: "1", label: "1 estrela", hint: "A qualificar" },
+  { value: "2", label: "2 estrelas", hint: "Frio" },
+  { value: "3", label: "3 estrelas", hint: "Morno" },
+  { value: "4", label: "4 estrelas", hint: "Quente" },
+  { value: "5", label: "5 estrelas", hint: "Venda na certa" },
+] as const);
+
+/** Qualificação do lead → estrelas da negociação. */
+export const STARS_FROM_LEAD_QUALIFICATION: Record<LeadQualification, number> = {
+  a_qualificar: 1,
+  frio: 2,
+  morno: 3,
+  quente: 4,
+  venda_certa: 5,
+};
+
+export const taskTypes = defineOptions([
+  { value: "follow_up", label: "Follow-up" },
+  { value: "ligacao", label: "Ligação" },
+  { value: "reuniao", label: "Reunião" },
+  { value: "whatsapp", label: "WhatsApp" },
+  { value: "email", label: "E-mail" },
+  { value: "proposta", label: "Proposta" },
+  { value: "outro", label: "Outro" },
+] as const);
+export type TaskType = (typeof taskTypes.options)[number]["value"];
+
+/** Tipos de campo personalizado da negociação (por funil). */
+export const customFieldTypes = defineOptions([
+  { value: "text", label: "Texto" },
+  { value: "number", label: "Número" },
+  { value: "currency", label: "Moeda (R$)" },
+  { value: "date", label: "Data" },
+  { value: "select", label: "Seleção (lista)" },
+  { value: "boolean", label: "Sim / Não" },
+] as const);
+export type CustomFieldType = (typeof customFieldTypes.options)[number]["value"];
+
+/** Cores das etapas do funil (nome → classe de fundo/texto no Kanban). */
+export const stageColors = defineOptions([
+  { value: "slate", label: "Cinza" },
+  { value: "blue", label: "Azul" },
+  { value: "violet", label: "Roxo" },
+  { value: "amber", label: "Âmbar" },
+  { value: "orange", label: "Laranja" },
+  { value: "green", label: "Verde" },
+] as const);
+export type StageColor = (typeof stageColors.options)[number]["value"];
+
+/** Motivos de perda da negociação. */
+export const lostReasons = defineOptions([
+  { value: "preco", label: "Preço" },
+  { value: "concorrente", label: "Fechou com concorrente" },
+  { value: "sem_orcamento", label: "Sem orçamento" },
+  { value: "sem_resposta", label: "Parou de responder" },
+  { value: "timing", label: "Não é o momento" },
+  { value: "sem_fit", label: "Sem fit com a solução" },
+  { value: "desistiu", label: "Desistiu do projeto" },
+  { value: "outro", label: "Outro motivo" },
+] as const);
+
+/** Tipos de arquivo aceitos nas negociações (só documentos). */
+export const DEAL_FILE_TYPES: Record<string, { ext: string; label: string; magic: "pdf" | "zip" }> = {
+  "application/pdf": { ext: "pdf", label: "PDF", magic: "pdf" },
+  "application/vnd.openxmlformats-officedocument.wordprocessingml.document": { ext: "docx", label: "Word", magic: "zip" },
+  "application/vnd.openxmlformats-officedocument.presentationml.presentation": { ext: "pptx", label: "PowerPoint", magic: "zip" },
+  "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet": { ext: "xlsx", label: "Excel", magic: "zip" },
+};
+export const DEAL_FILE_MAX_BYTES = 25 * 1024 * 1024;

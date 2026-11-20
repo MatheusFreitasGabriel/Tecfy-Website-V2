@@ -477,7 +477,8 @@ export default function LeadsView({ leads, truncated, basePath, currentUid, curr
           }}
           onNoteAdded={(note) => onNoteAdded(detailsLead.id, note)}
           onClose={closeDetails}
-          onConvert={() => setConfirm({ kind: "convert", ids: [detailsLead.id] })}
+          // Um lead: abre a conversão completa (funil, etapa, valor...) na tela de Negociações.
+          onConvert={() => router.push(`${basePath}/negociacoes?converter=${detailsLead.id}`)}
           onWhatsApp={() => setComposer({ kind: "whatsapp", leadId: detailsLead.id })}
           onEmail={(configured) => setComposer({ kind: "email", leadId: detailsLead.id, configured })}
           onAssign={() => setAssign({ ids: [detailsLead.id], currentOwnerUid: detailsLead.owner_uid, fromSelection: false })}

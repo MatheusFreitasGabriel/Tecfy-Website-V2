@@ -9,6 +9,11 @@
  * companies/{id}  — empresa (cliente ou prospect).
  */
 import type {
+  CustomFieldType,
+  DealOrigin,
+  DealStatus,
+  StageColor,
+  TaskType,
   CompanyRegion,
   CompanySegment,
   CompanySize,
@@ -300,4 +305,181 @@ export interface CompanyDetail extends CompanyRow {
   leads: LeadSummary[];
   deals: DealSummary[];
   contracts: ContractSummary[];
+}
+
+// ── Negociações: quadros, funis, negociações, tarefas ────────────────────────
+
+export const BOARDS_COLLECTION = "boards";
+export const PIPELINES_COLLECTION = "pipelines";
+export const TASKS_COLLECTION = "tasks";
+export const DEAL_HISTORY_SUBCOLLECTION = "history";
+
+/** Máximo de etapas por funil. */
+export const MAX_STAGES = 6;
+export const MAX_CUSTOM_FIELDS = 20;
+
+export interface PipelineStage {
+  id: string;
+  name: string;
+  color: StageColor;
+  /** % de chance de fechar a partir desta etapa (0–100) → valor ponderado. */
+  probability: number;
+}
+
+export interface CustomField {
+  id: string;
+  label: string;
+  type: CustomFieldType;
+  /** Só para "select". */
+  options: string[];
+  required: boolean;
+}
+
+/** Quadro (ex.: Comercial). Contém funis. */
+export interface Board {
+  id: string;
+  name: string;
+  description: string | null;
+  order: number;
+  archived: boolean;
+}
+
+/** Funil (ex.: Pré-venda) dentro de um quadro, com até 6 etapas. */
+export interface Pipeline {
+  id: string;
+  board_id: string;
+  name: string;
+  description: string | null;
+  order: number;
+  archived: boolean;
+  stages: PipelineStage[];
+  custom_fields: CustomField[];
+}
+
+/** Negociação na lista/Kanban (serializável para o cliente). */
+export interface DealRow {
+  id: string;
+  title: string;
+  board_id: string | null;
+  pipeline_id: string | null;
+  stage_id: string | null;
+  /** Ordem dentro da etapa (fracionário). */
+  position: number;
+  status: DealStatus;
+  /** 1–5 estrelas. */
+  qualification: number;
+  value_cents: number | null;
+  expected_close_date: string | null;
+  owner_uid: string | null;
+  owner_name: string | null;
+  created_by_uid: string | null;
+  created_by_name: string | null;
+  origin: DealOrigin;
+  lead_id: string | null;
+  contact: { id: string; name: string; email: string | null; phone: string | null } | null;
+  company: { id: string; name: string; cnpj: string | null } | null;
+  /** Vencimento (ISO) de cada tarefa aberta, do mais próximo ao mais distante. A tela calcula hoje/atrasadas. */
+  task_due: string[];
+  source: LeadSource | null;
+  context: string | null;
+  custom: Record<string, string | number | boolean | null>;
+  lost_reason: string | null;
+  created_at: string | null;
+  updated_at: string | null;
+  stage_entered_at: string | null;
+  /** Pausada até (AAAA-MM-DD), quando informado. */
+  paused_until: string | null;
+  /** Tempo acumulado (ms) nas etapas já deixadas: etapa → ms. */
+  stage_time: Record<string, number>;
+  last_activity_at: string | null;
+  version: number;
+}
+
+/** Tarefa (lista/calendário). */
+export interface TaskRow {
+  id: string;
+  deal_id: string | null;
+  title: string;
+  type: TaskType;
+  /** ISO (data e hora). */
+  due_at: string;
+  done_at: string | null;
+  assignee_uid: string | null;
+  assignee_name: string | null;
+  notes: string | null;
+  created_at: string | null;
+}
+
+/** Lead disponível para converter (lista do "Converter lead"). */
+export interface ConvertibleLead {
+  id: string;
+  title: string;
+  qualification: LeadQualification;
+  source: LeadSource | null;
+  entry: LeadEntry;
+  owner_uid: string | null;
+  estimated_value_cents: number | null;
+  expected_close_date: string | null;
+  interest_plan: string | null;
+  notes: string | null;
+  contact: { id: string; name: string } | null;
+  company: { id: string; name: string } | null;
+  created_at: string | null;
+}
+
+// ── Página da negociação ─────────────────────────────────────────────────────
+
+export const DEAL_FILES_COLLECTION = "deal_files";
+
+/** Negociação completa (página de detalhes). */
+export interface DealDetail extends DealRow {
+  interest_plan: string | null;
+  /** Quando o lead chegou (negociações convertidas). */
+  lead_created_at: string | null;
+  won_at: string | null;
+  lost_at: string | null;
+  lost_detail: string | null;
+  paused_reason: string | null;
+  contract: { id: string; product_name: string; monthly_value: number; status: "active" | "cancelled"; signed_at: string | null } | null;
+  contact_info: { id: string; name: string; email: string | null; phone: string | null; role: string | null } | null;
+  company_info: {
+    id: string;
+    name: string;
+    legal_name: string | null;
+    cnpj: string | null;
+    phone: string | null;
+    email: string | null;
+    website: string | null;
+    address: string | null;
+  } | null;
+}
+
+/** Registro do histórico da negociação. */
+export interface DealHistoryRow {
+  id: string;
+  type: string;
+  title: string;
+  description: string | null;
+  author_name: string | null;
+  created_at: string | null;
+}
+
+/** Arquivo/proposta anexado. */
+export interface DealFileRow {
+  id: string;
+  name: string;
+  kind: "proposta" | "arquivo";
+  mime: string;
+  size: number;
+  uploaded_by_name: string | null;
+  created_at: string | null;
+}
+
+/** Produto para "Marcar como venda" (só leitura — a tela Produtos é do usuário). */
+export interface ProductOption {
+  id: string;
+  name: string;
+  /** Reais; null = sob consulta. */
+  monthly_price: number | null;
+  price_label: string | null;
 }

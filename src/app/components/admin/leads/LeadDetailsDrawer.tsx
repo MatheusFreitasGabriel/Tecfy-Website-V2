@@ -338,7 +338,9 @@ export default function LeadDetailsDrawer({
 
         <footer className="flex shrink-0 flex-col-reverse gap-3 border-t border-admin-divider px-7 py-5 sm:flex-row sm:justify-end">
           {lead.deal_id ? (
-            <p className="self-center text-xs font-medium text-admin-tip-title sm:mr-auto">Já convertido em negociação.</p>
+            <Link href={`${basePath}/negociacoes/${lead.deal_id}`} className="inline-flex items-center gap-2 self-center text-xs font-semibold text-admin-tip-title hover:underline sm:mr-auto">
+              <FaHandshake aria-hidden className="h-3 w-3" /> Já convertido · abrir negociação
+            </Link>
           ) : (
             <Button variant="secondary" icon={FaHandshake} onClick={onConvert} disabled={busy}>
               Converter para negociação

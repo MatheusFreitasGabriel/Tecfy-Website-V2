@@ -42,3 +42,14 @@ export function getAdminDb(): Firestore {
 export function getAdminAuth(): Auth {
   return getAuth(getAdminApp());
 }
+
+/**
+ * Bucket do Firebase Storage para arquivos/propostas das negociações (privado: só o servidor acessa,
+ * por URLs assinadas de poucos minutos). null = Storage ainda não configurado (FIREBASE_STORAGE_BUCKET).
+ */
+export async function getAdminBucket() {
+  const name = process.env.FIREBASE_STORAGE_BUCKET;
+  if (!name) return null;
+  const { getStorage } = await import("firebase-admin/storage");
+  return getStorage(getAdminApp()).bucket(name);
+}

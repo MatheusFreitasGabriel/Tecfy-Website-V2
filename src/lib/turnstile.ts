@@ -42,7 +42,9 @@ export async function verifyTurnstile(token: string, ip: string, expectedAction:
 
   if (!data.success) return false;
 
-  const allowedHostnames = process.env.NODE_ENV === "production" ? PRODUCTION_HOSTNAMES : DEV_HOSTNAMES;
+  // Em produção, localhost só com ADMIN_ALLOW_LOCALHOST=1 (teste local com `npm start`; NUNCA na Vercel).
+  const strict = process.env.NODE_ENV === "production" && process.env.ADMIN_ALLOW_LOCALHOST !== "1";
+  const allowedHostnames = strict ? PRODUCTION_HOSTNAMES : DEV_HOSTNAMES;
   const hostnameOk = !!data.hostname && allowedHostnames.includes(data.hostname);
   const actionOk = data.action === expectedAction;
 

@@ -133,6 +133,74 @@ export function LeadsSkeleton() {
   );
 }
 
+/** Tela de Negociações: topo, seletores, 4 indicadores, filtros e colunas do Kanban. */
+export function KanbanSkeleton() {
+  return (
+    <div role="status" aria-live="polite" className="flex min-h-screen w-full flex-col gap-7 p-8">
+      <span className="sr-only">Carregando negociações...</span>
+      <div className="flex flex-col gap-6 md:flex-row md:items-start md:justify-between">
+        <div className="flex flex-col gap-2.5">
+          <div className="flex items-center gap-4">
+            <div className={`${block} h-9 w-52`} />
+            <div className={`${block} h-7 w-[38px]`} />
+          </div>
+          <div className={`${block} h-4 w-96 max-w-full`} />
+        </div>
+        <div className="flex gap-4">
+          <div className={`${block} h-11 w-[160px]`} />
+          <div className={`${primaryBlock} h-11 w-[186px]`} />
+        </div>
+      </div>
+      <div className="flex flex-wrap items-end justify-between gap-3">
+        <div className="flex gap-3">
+          <div className={`${block} h-11 w-[220px]`} />
+          <div className={`${block} h-11 w-[220px]`} />
+          <div className={`${block} h-11 w-[150px]`} />
+        </div>
+        <div className={`${block} h-11 w-[200px]`} />
+      </div>
+      <div className="grid grid-cols-2 gap-4 xl:grid-cols-4">
+        {Array.from({ length: 4 }, (_, i) => (
+          <div key={i} className="flex flex-col gap-3 rounded-2xl bg-background-kpi p-5 outline outline-1 -outline-offset-1 outline-admin-card-border">
+            <div className={`${block} h-3.5 w-36`} />
+            <div className={`${block} h-7 w-24`} />
+            <div className={`${block} h-3 w-32`} />
+          </div>
+        ))}
+      </div>
+      <div className="flex gap-3">
+        <div className={`${block} h-11 flex-1`} />
+        <div className={`${block} hidden h-11 w-[210px] xl:block`} />
+        <div className={`${block} hidden h-11 w-[190px] xl:block`} />
+        <div className={`${block} hidden h-11 w-[170px] xl:block`} />
+      </div>
+      <div className="flex gap-4 overflow-hidden">
+        {[3, 2, 4, 1, 2].map((cards, c) => (
+          <div key={c} className="flex w-[288px] min-w-[288px] flex-1 flex-col gap-2.5 rounded-2xl bg-admin-column p-2.5 outline outline-1 -outline-offset-1 outline-admin-column-border">
+            <div className="flex items-center justify-between px-1.5 py-1">
+              <div className={`${block} h-4 w-28`} />
+              <div className={`${block} h-6 w-7`} />
+            </div>
+            <div className={`${block} mx-1.5 h-3 w-40`} />
+            {Array.from({ length: cards }, (_, i) => (
+              <div key={i} className="flex flex-col gap-2.5 rounded-xl bg-admin-deal-card p-3.5 outline outline-1 -outline-offset-1 outline-admin-card-border">
+                <div className={`${block} h-6 w-24 rounded-md`} />
+                <div className={`${block} h-4`} style={{ width: `${60 + ((c + i) * 13) % 35}%` }} />
+                <div className={`${block} h-3 w-3/5`} />
+                <div className="flex justify-between">
+                  <div className={`${block} h-3 w-20`} />
+                  <div className={`${block} h-4 w-16`} />
+                </div>
+                <div className={`${block} h-7 w-full rounded-md`} />
+              </div>
+            ))}
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
 /** Lista de itens do histórico enquanto carrega (painel do lead / timelines). */
 export function TimelineSkeleton({ items = 3 }: { items?: number }) {
   return (

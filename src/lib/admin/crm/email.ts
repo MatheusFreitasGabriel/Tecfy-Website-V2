@@ -51,7 +51,7 @@ export const escapeHtml = (text: string) =>
   text.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#39;");
 
 /** Texto digitado → HTML simples (parágrafos e quebras de linha), sempre escapado. */
-function toHtml(body: string): string {
+export function toHtml(body: string): string {
   const paragraphs = body
     .split(/\n{2,}/)
     .map((p) => `<p style="margin:0 0 16px">${escapeHtml(p).replace(/\n/g, "<br>")}</p>`)

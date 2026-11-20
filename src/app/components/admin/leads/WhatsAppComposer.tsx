@@ -16,10 +16,12 @@ interface WhatsAppComposerProps {
   context: TemplateContext;
   onClose: () => void;
   onManageTemplates: () => void;
+  /** Conversa aberta (a negociação registra no histórico). */
+  onOpened?: (phone: string, message: string) => void;
 }
 
 /** Escreve (ou escolhe um modelo) e abre a conversa no WhatsApp já com a mensagem. */
-export default function WhatsAppComposer({ phones, templates, context, onClose, onManageTemplates }: WhatsAppComposerProps) {
+export default function WhatsAppComposer({ phones, templates, context, onClose, onManageTemplates, onOpened }: WhatsAppComposerProps) {
   const [phone, setPhone] = useState(phones[0]?.digits ?? "");
   const [templateId, setTemplateId] = useState(templates[0]?.id ?? "");
   const [message, setMessage] = useState(() => (templates[0] ? fillTemplate(templates[0].body, context) : ""));
@@ -33,6 +35,7 @@ export default function WhatsAppComposer({ phones, templates, context, onClose, 
   const open = () => {
     if (!phone) return;
     window.open(whatsappLink(phone, message.trim()), "_blank", "noopener,noreferrer");
+    onOpened?.(phone, message.trim());
     onClose();
   };
 

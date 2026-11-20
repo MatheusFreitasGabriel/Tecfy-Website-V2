@@ -6,6 +6,8 @@ import { COMPANIES_LIST_LIMIT, activeClientIds, getCompanyDetail, listCompaniesP
 import { CONTACTS_LIST_LIMIT, getContactDetail, listContactsPage, type PageCursor } from "./contacts";
 import type { CompanyRow, ContactRow, LeadRow } from "./types";
 import { listTemplates } from "./templatesStore";
+import { DEALS_LIST_LIMIT, listDealsPage, listOpenTaskDue, listPipelineSetup, placeDeals, type DealsCursor } from "./deals";
+import type { DealRow } from "./types";
 
 /**
  * Cache de leitura do CRM (Next Data Cache). Abrir/atualizar a tela de Leads só lê o Firestore
@@ -22,6 +24,10 @@ export const CRM_TAGS = {
   companies: "crm-companies",
   admins: "crm-admins",
   templates: "crm-templates",
+  deals: "crm-deals",
+  pipelines: "crm-pipelines",
+  tasks: "crm-tasks",
+  products: "crm-products",
 } as const;
 export type CrmTag = (typeof CRM_TAGS)[keyof typeof CRM_TAGS];
 
@@ -146,3 +152,45 @@ export function getCachedCompanyDetail(id: string) {
     revalidate: 3600,
   })();
 }
+
+// ── Negociações ─────────────────────────────────────────────────────────────
+
+/** Quadros e funis (poucos documentos; muda só na tela de gerenciar funis). */
+export const getCachedPipelineSetup = unstable_cache(() => listPipelineSetup(), ["crm-pipelines-v1"], {
+  tags: [CRM_TAGS.pipelines],
+  revalidate: 3600,
+});
+
+/** Vencimentos das tarefas abertas (indicadores "hoje"/"atrasadas" e alertas dos cards). */
+export const getCachedOpenTaskDue = unstable_cache(() => listOpenTaskDue(), ["crm-open-tasks-v1"], {
+  tags: [CRM_TAGS.tasks],
+  revalidate: 3600,
+});
+
+/** Uma página de negociações (até 1.000) — mostra nome de contato/empresa, então depende deles. */
+const getCachedDealsPage = unstable_cache(
+  async (cursorKey: string) => listDealsPage(cursorKey ? (JSON.parse(cursorKey) as DealsCursor) : null),
+  ["crm-deals-page-v1"],
+  { tags: [CRM_TAGS.deals, CRM_TAGS.contacts, CRM_TAGS.companies], revalidate: 3600 },
+);
+
+/** Negociações já posicionadas num funil/etapa válidos, com os vencimentos das tarefas. */
+export async function getCachedDeals(): Promise<{ deals: DealRow[]; truncated: boolean }> {
+  const setupPromise = getCachedPipelineSetup();
+  const tasksPromise = getCachedOpenTaskDue();
+  const deals: DealRow[] = [];
+  let cursor: DealsCursor | null = null;
+  do {
+    const page: { rows: DealRow[]; next: DealsCursor | null } = await getCachedDealsPage(cursor ? JSON.stringify(cursor) : "");
+    deals.push(...page.rows);
+    cursor = page.next;
+  } while (cursor && deals.length < DEALS_LIST_LIMIT);
+  const [setup, tasks] = await Promise.all([setupPromise, tasksPromise]);
+  return { deals: placeDeals(deals.slice(0, DEALS_LIST_LIMIT), setup.pipelines, tasks), truncated: Boolean(cursor) };
+}
+
+/** Produtos ativos para "Marcar como venda" (só leitura; a tela Produtos é do usuário). 5 min de cache. */
+export const getCachedProductOptions = unstable_cache(async () => (await import("./dealDetail")).listProductOptions(), ["crm-products-v1"], {
+  tags: [CRM_TAGS.products],
+  revalidate: 300,
+});

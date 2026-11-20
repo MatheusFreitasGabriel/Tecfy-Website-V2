@@ -22,6 +22,8 @@ interface EmailComposerProps {
   /** Registro do e-mail enviado (a tela acrescenta no histórico sem buscar de novo). */
   onSent: (email: LeadEmailRow | null) => void;
   onManageTemplates: () => void;
+  /** URL de envio (padrão: e-mail do lead). A negociação usa a dela. */
+  endpoint?: string;
 }
 
 const signatureFor = (ctx: TemplateContext) => `\n\n${ctx.owner ?? "Equipe"}\nTecfy · tecfy.dev`;
@@ -45,6 +47,7 @@ export default function EmailComposer({
   onClose,
   onSent,
   onManageTemplates,
+  endpoint,
 }: EmailComposerProps) {
   const bodyRef = useRef<HTMLTextAreaElement>(null);
   const first = templates[0];
@@ -88,7 +91,7 @@ export default function EmailComposer({
     }
     setSending(true);
     try {
-      const response = await fetch(`${basePath}/api/crm/leads/${leadId}/email`, {
+      const response = await fetch(endpoint ?? `${basePath}/api/crm/leads/${leadId}/email`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(result.value),

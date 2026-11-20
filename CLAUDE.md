@@ -109,6 +109,7 @@ Two route groups (group names don't appear in the URL):
 - Site-wide security headers live in `next.config.ts`; the admin additionally gets the nonce CSP.
 - Access management: `scripts/admin-setup.mjs` (`enable-totp`, `grant`, `allow-enroll`, `revoke`,
   `reset-2fa`, `status`), run with `node --env-file=.env.local`.
+- Local prod-mode testing (`npm start` on localhost) needs ADMIN_ALLOW_LOCALHOST=1 (origin + Turnstile hostname); never set it on Vercel.
 - Turnstile verification is shared: `verifyTurnstile(token, ip, action)` in `src/lib/turnstile.ts`
   (also used by `/api/leads`). `TurnstileWidget` takes an `action` prop.
 
@@ -185,6 +186,26 @@ the 409 branch in `Form.tsx` is now unused).
   A company is **Cliente** when it has an active `contracts` doc with its `company_id` (Products screen, future;
   the user owns that design), otherwise "Prospect". Timelines for all three use `crm/notes.ts`
   (`listNotes`/`addNote` by parent collection) and the shared `components/admin/shared/NotesTimeline`.
+- **Negociações** (`crm/deals.ts`, `crm/dealValidation.ts`, UI in `components/admin/deals/`): **board → pipelines →
+  stages (max 6)**. `boards`, `pipelines` (`stages: [{id,name,color,probability}]`, `custom_fields`), `deals`
+  (`pipeline_id`, `stage_id`, fractional `position`, `status` em_andamento|pausada|perdida|vendida, `qualification`
+  1–5 stars, `version`), append-only `deals/{id}/history`, `tasks` (`done`, `due_at`). Default board `comercial` +
+  pipeline `vendas` are auto-created (fixed ids) on first read. Legacy deals (no pipeline/stage) are placed in the
+  default pipeline's first stage **at read time** (`placeDeals`), never migrated. Ids: manual `d_<request uuid>`
+  (idempotent), converted lead `l_<leadId>` (one deal per lead — the Leads bulk "convert" uses the same id). Kanban drag
+  = `POST …/api/crm/deals/move` writes ONE doc (stage + position between neighbours); the move tx re-reads the pipeline,
+  so a removed stage rejects with 409 `pipeline_changed`. Removing a stage with deals requires `stage_moves`.
+  Boards/pipelines are archived, never deleted. Funnel + view live in the URL (`?funil=&visao=lista`);
+  `?converter=<leadId>` opens the convert modal (Leads drawer links here). Cache tags `crm-deals`, `crm-pipelines`,
+  `crm-tasks`; the list ships open-task due dates and the client computes today/overdue (`useNow`).
+- **Deal page** (`/negociacoes/[id]`, `crm/dealDetail.ts`, UI in `components/admin/deal-detail/`): edits go through
+  `PATCH …/api/crm/deals/[id]` with `version` (optimistic concurrency → 409 `stale`), one history entry per changed
+  field; linking contact/company only fills an empty link. **Won** = `POST …/won` (product read from `products`,
+  never written) creates `contracts/deal_<id>` (idempotent; needs `company_id`; `monthly_value` in reais like the
+  dashboard expects); **reopen** a won deal deletes that contract. Files: Firebase Storage (`FIREBASE_STORAGE_BUCKET`,
+  private bucket) via 5-min signed PUT (`x-goog-content-length-range`) → `POST …/files/[fileId]` re-checks size, magic
+  bytes (PDF / OOXML zip) and SHA-256 (dedupe per deal) on the server; downloads are 5-min signed URLs, logged in
+  history. Bucket CORS: `scripts/storage-setup.mjs`. Queries here use equality filters only (no composite indexes).
 - Message templates: built-ins in code (`BUILTIN_TEMPLATES`, read-only) + custom ones in
   `message_templates` (`POST …/api/crm/templates`).
 - `scripts/crm-setup.mjs migrate-leads [--apply]` converts pre-v2 website leads (dry-run by default).

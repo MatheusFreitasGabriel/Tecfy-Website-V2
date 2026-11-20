@@ -12,7 +12,7 @@ import {
 import { getAdminDb } from "@/lib/firebaseAdmin";
 import { ensureCnpjIndex, readCnpjIndex, writeCnpjIndex } from "./companyIndex";
 import { ensureEmailIndex, readEmailIndex, writeEmailIndex } from "./contactIndex";
-import { leadEntries, leadQualifications, leadSources, leadStages, leadStatuses } from "./options";
+import { STARS_FROM_LEAD_QUALIFICATION, leadEntries, leadQualifications, leadSources, leadStages, leadStatuses } from "./options";
 import {
   COMPANIES_COLLECTION,
   CONTACTS_COLLECTION,
@@ -353,21 +353,47 @@ export async function convertLeads(ids: string[], actor: Actor): Promise<{ id: s
     for (const snap of snaps) {
       const d = snap.data();
       if (!d || str(d.deal_id)) continue;
-      const dealRef = deals.doc();
+      // Id único por conversão (uma por lead é garantido pelo deal_id lido nesta transação).
+      const dealRef = deals.doc(`l_${snap.id}_${Date.now().toString(36)}`);
+      const title = str(d.title) ?? str(d.lead_name) ?? "Sem nome";
       tx.create(dealRef, {
         lead_id: snap.id,
-        title: str(d.title) ?? str(d.lead_name) ?? "Sem nome",
+        title,
+        // Funil padrão; a etapa vazia cai na primeira etapa do funil ao ler.
+        board_id: "comercial",
+        pipeline_id: "vendas",
+        stage_id: null,
+        position: -Date.now(),
+        status: "em_andamento",
+        qualification: STARS_FROM_LEAD_QUALIFICATION[leadQualifications.is(d.qualification) ? d.qualification : "a_qualificar"],
+        origin: d.entry === "website" || d.origin === "website" ? "lead_website" : "lead_manual",
+        source: leadSources.is(d.source) ? d.source : d.origin === "website" ? "website" : null,
         contact_id: str(d.contact_id),
         company_id: str(d.company_id),
-        owner_uid: str(d.owner_uid),
-        owner_name: str(d.owner_name),
-        estimated_value_cents: typeof d.estimated_value_cents === "number" ? d.estimated_value_cents : null,
+        owner_uid: str(d.owner_uid) ?? actor.uid,
+        owner_name: str(d.owner_name) ?? actor.name,
+        value_cents: typeof d.estimated_value_cents === "number" ? d.estimated_value_cents : null,
         expected_close_date: str(d.expected_close_date),
-        status: "open",
+        interest_plan: str(d.interest_plan),
+        lead_created_at: d.created_at ?? null,
+        context: str(d.notes),
+        custom: {},
+        version: 1,
         created_by_uid: actor.uid,
         created_by_name: actor.name,
         created_at: now,
         updated_at: now,
+        stage_entered_at: now,
+        last_activity_at: now,
+      });
+      tx.create(dealRef.collection("history").doc(), {
+        type: "created",
+        title: "Lead convertido em negociação",
+        description: `Lead “${title}” convertido pela tela de Leads.`,
+        meta: {},
+        author_uid: actor.uid,
+        author_name: actor.name,
+        created_at: now,
       });
       tx.update(snap.ref, { deal_id: dealRef.id, converted_at: now, stage: "em_negociacao", status: "convertido", updated_at: now });
       converted.push({ id: snap.id, deal_id: dealRef.id });
