@@ -289,6 +289,7 @@ export interface CompanyRow {
   size: CompanySize | null;
   email: string | null;
   phone: string | null;
+  website: string | null;
   city: string | null;
   region: CompanyRegion | null;
   status: "ativo" | "inativo";

@@ -28,6 +28,8 @@ export const CRM_TAGS = {
   pipelines: "crm-pipelines",
   tasks: "crm-tasks",
   products: "crm-products",
+  /** Histórico da tela "Importar lista". */
+  imports: "crm-imports",
 } as const;
 export type CrmTag = (typeof CRM_TAGS)[keyof typeof CRM_TAGS];
 
@@ -78,6 +80,12 @@ export const getCachedAdmins = unstable_cache(() => listAdminUsers(), ["crm-admi
   revalidate: 600,
 });
 
+/** Últimas importações de planilha (tela Importar lista). */
+export const getCachedImports = unstable_cache(async () => (await import("./leadImport/commit")).listImports(), ["crm-imports-v1"], {
+  tags: [CRM_TAGS.imports],
+  revalidate: 3600,
+});
+
 export const getCachedTemplates = unstable_cache(() => listTemplates(), ["crm-templates-v1"], {
   tags: [CRM_TAGS.templates],
   revalidate: 3600,
@@ -113,7 +121,7 @@ const getCachedCompaniesPage = unstable_cache(
     const clients = new Set(await getCachedClientIds());
     return listCompaniesPage(cursorKey ? (JSON.parse(cursorKey) as PageCursor) : null, clients);
   },
-  ["crm-companies-page-v1"],
+  ["crm-companies-page-v2"],
   { tags: [CRM_TAGS.companies], revalidate: 3600 },
 );
 

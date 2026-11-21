@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useState } from "react";
 import { FaFileImport, FaPlus } from "react-icons/fa6";
 import type { AdminUserOption, LeadRow } from "@/lib/admin/crm/types";
@@ -39,16 +40,13 @@ export default function LeadsHeader({ total, basePath, admins, currentUid, onCre
       </div>
 
       <div className="flex shrink-0 flex-wrap gap-4">
-        {/* Importação por planilha: próxima demanda. */}
-        <Button
-          variant="secondary"
-          icon={FaFileImport}
-          disabled
-          title="Em breve"
-          className="!bg-background-kpi !outline-admin-picker-border"
+        <Link
+          href={`${basePath}/leads/importar`}
+          className="inline-flex h-11 items-center justify-center gap-2 whitespace-nowrap rounded-[10px] bg-background-kpi px-6 text-sm font-semibold leading-5 text-text-primary outline outline-1 -outline-offset-1 outline-admin-picker-border transition-colors hover:bg-admin-badge focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-admin-accent"
         >
+          <FaFileImport aria-hidden className="h-3.5 w-3.5" />
           Importar lista
-        </Button>
+        </Link>
         <Button icon={FaPlus} onClick={() => setCreating(true)}>
           Criar lead
         </Button>

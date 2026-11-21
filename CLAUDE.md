@@ -214,6 +214,15 @@ the 409 branch in `Form.tsx` is now unused).
   Brasília time and jumps over long overdue periods. Screen data = `getCachedTasks()` (open tasks paged by doc id +
   done in the last 60 days, tag `crm-tasks`); bulk ops ≤100 (`POST …/api/crm/tasks/bulk`). The bell gets a per-user
   summary (overdue/today/reminders) from that cache and fires reminders client-side (toast + browser Notification).
+- **Importar lista** (`/leads/importar`, `crm/leadImport/*`, UI in `components/admin/leads/import/`): the .xlsx/.csv is
+  read in the BROWSER (`sheet.ts`, no library: zip via `DecompressionStream`); columns/conversion/validation are pure
+  (`columns.ts`, reuses `validate*Form`) and the row status/action logic too (`review.ts`: erro, sem_contato — no
+  e-mail/phone/site, user rule —, duplicado = open lead of same contact/company/e-mail/phone, repetido in file,
+  existente, novo). `POST …/api/crm/leads/import/analyze` is read-only (cached lists passed into `analyzeImportRows` +
+  `getAll` of matched docs for the "planilha × CRM" diff). `POST …/import/commit` (≤25 rows) → `createManualLead`
+  (lead id from import_id+line → idempotent, `import_id` on the lead), "update" = fixed-id system note on the existing
+  lead, "fill" = only EMPTY contact/company fields via `updateContact`/`updateCompany` (never overwrites). History in
+  `lead_imports` (tag `crm-imports`). Matching companies by site uses `CompanyRow.website`.
 - Message templates: built-ins in code (`BUILTIN_TEMPLATES`, read-only) + custom ones in
   `message_templates` (`POST …/api/crm/templates`).
 - `scripts/crm-setup.mjs migrate-leads [--apply]` converts pre-v2 website leads (dry-run by default).

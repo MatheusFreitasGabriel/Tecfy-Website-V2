@@ -56,6 +56,7 @@ function toCompanyRow(doc: DocumentSnapshot, clients: Set<string>): CompanyRow {
     size: companySizes.is(d.size) ? d.size : null,
     email: str(d.email),
     phone: str(d.phone),
+    website: str(d.website),
     city: str(address.city),
     region: companyRegions.is(address.region) ? address.region : null,
     status: statusOf(d.status),

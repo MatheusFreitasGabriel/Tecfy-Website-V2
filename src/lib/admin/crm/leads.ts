@@ -206,7 +206,14 @@ export interface CreateLeadResult {
  * (clique duplo, rede instável) devolve o mesmo lead em vez de criar outro.
  * `entry: "manual"` é fixado aqui — o cliente não escolhe.
  */
-export async function createManualLead(input: ParsedCreateLead, owner: Actor, actor: Actor, requestId: string): Promise<CreateLeadResult> {
+export async function createManualLead(
+  input: ParsedCreateLead,
+  owner: Actor,
+  actor: Actor,
+  requestId: string,
+  /** Importação por planilha que criou o lead (histórico da tela Importar lista). */
+  extra: { import_id?: string } = {},
+): Promise<CreateLeadResult> {
   const db = getAdminDb();
   const contacts = db.collection(CONTACTS_COLLECTION);
   const companies = db.collection(COMPANIES_COLLECTION);
@@ -276,6 +283,7 @@ export async function createManualLead(input: ParsedCreateLead, owner: Actor, ac
       owner_uid: owner.uid,
       owner_name: owner.name,
       entry: "manual",
+      ...(extra.import_id ? { import_id: extra.import_id } : {}),
       contact_id: contactId,
       company_id: companyId,
       schema_version: LEAD_SCHEMA_VERSION,
