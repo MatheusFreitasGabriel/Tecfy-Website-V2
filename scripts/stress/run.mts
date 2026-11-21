@@ -781,7 +781,7 @@ await scenario("24. Venda com clique duplo (20 simultâneos) → 1 contrato; des
   await product.set({ name: "Plano Teste", monthly_price: 199, active: true, sort: 1 });
   const { id } = await dealsLib.createDeal({ request_id: randomUUID(), deal: dealCore(pipeline, "Venda"), custom: {}, contact_id: null, company_id: companyId }, OWNER, ACTOR);
 
-  const won = await concurrently(Array.from({ length: 20 }, () => () => detailLib.markDealWon(id, { product_id: "plano_teste", product_name: null, monthly_cents: 19900, signed_date: "2026-11-19" }, ACTOR)));
+  const won = await concurrently(Array.from({ length: 20 }, () => () => detailLib.markDealWon(id, { product_id: "plano_teste", product_name: null, kind: "recorrente", setup_cents: 0, one_time_cents: 0, monthly_cents: 19900, signed_date: "2026-11-19" }, ACTOR)));
   check(won.failed.length === 0, `20 cliques sem erro (${won.failed.length})`);
   const contracts = await db.collection("contracts").where("deal_id", "==", id).get();
   check(contracts.size === 1, `1 contrato só (${contracts.size})`);
@@ -801,7 +801,7 @@ await scenario("24. Venda com clique duplo (20 simultâneos) → 1 contrato; des
   check((await db.collection("deals").doc(id).get()).get("status") === "em_andamento", "volta para Em andamento");
 
   const { id: noCompany } = await dealsLib.createDeal({ request_id: randomUUID(), deal: dealCore(pipeline, "Sem empresa"), custom: {}, contact_id: await seedContact("X"), company_id: null }, OWNER, ACTOR);
-  const needs = await detailLib.markDealWon(noCompany, { product_id: "plano_teste", product_name: null, monthly_cents: 100, signed_date: "2026-11-19" }, ACTOR).then(
+  const needs = await detailLib.markDealWon(noCompany, { product_id: "plano_teste", product_name: null, kind: "recorrente", setup_cents: 0, one_time_cents: 0, monthly_cents: 100, signed_date: "2026-11-19" }, ACTOR).then(
     () => "ok",
     (e) => e.message,
   );
@@ -908,7 +908,7 @@ await scenario("29. Venda com descrição livre (sem produto) + clique duplo →
   const pipeline = await defaultPipeline();
   const companyId = await seedCompany("Mercado");
   const { id } = await dealsLib.createDeal({ request_id: randomUUID(), deal: dealCore(pipeline, "Livre"), custom: {}, contact_id: null, company_id: companyId }, OWNER, ACTOR);
-  const { failed } = await concurrently(Array.from({ length: 10 }, () => () => detailLib.markDealWon(id, { product_id: null, product_name: "Sistema sob medida", monthly_cents: 350000, signed_date: "2026-11-19" }, ACTOR)));
+  const { failed } = await concurrently(Array.from({ length: 10 }, () => () => detailLib.markDealWon(id, { product_id: null, product_name: "Sistema sob medida", kind: "recorrente", setup_cents: 0, one_time_cents: 0, monthly_cents: 350000, signed_date: "2026-11-19" }, ACTOR)));
   check(failed.length === 0, `10 cliques sem erro (${failed.length})`);
   const contracts = await db.collection("contracts").where("deal_id", "==", id).get();
   check(contracts.size === 1, `1 contrato (${contracts.size})`);
@@ -948,7 +948,7 @@ await scenario("30. Excluir negociação: limpa histórico/tarefas, lead volta a
 
   const companyId = await seedCompany("Vendida");
   const { id: sold } = await dealsLib.createDeal({ request_id: randomUUID(), deal: dealCore(pipeline, "Vendida"), custom: {}, contact_id: null, company_id: companyId }, OWNER, ACTOR);
-  await detailLib.markDealWon(sold, { product_id: null, product_name: "X", monthly_cents: 100, signed_date: "2026-11-19" }, ACTOR);
+  await detailLib.markDealWon(sold, { product_id: null, product_name: "X", kind: "recorrente", setup_cents: 0, one_time_cents: 0, monthly_cents: 100, signed_date: "2026-11-19" }, ACTOR);
   const blocked = await detailLib.deleteDeal(sold, ACTOR).then(
     () => "ok",
     (e) => e.message,
@@ -1043,8 +1043,8 @@ await scenario("32. Custo de cada função (leituras/gravações no Firestore) d
     ops.reads = 0;
     return detailLib.moveDealToPipeline(id, { pipeline_id: other.id, stage_id: "outro001", version: v }, ACTOR);
   });
-  await measure("Registrar venda (cria contrato)", { reads: 3, writes: 3 }, () => detailLib.markDealWon(id, { product_id: "p_custo", product_name: null, monthly_cents: 9900, signed_date: "2026-11-19" }, ACTOR));
-  await measure("Desfazer venda", { reads: 1, writes: 3 }, () => detailLib.reopenDeal(id, ACTOR));
+  await measure("Registrar venda (cria contrato)", { reads: 3, writes: 3 }, () => detailLib.markDealWon(id, { product_id: "p_custo", product_name: null, kind: "recorrente", setup_cents: 0, one_time_cents: 0, monthly_cents: 9900, signed_date: "2026-11-19" }, ACTOR));
+  await measure("Desfazer venda", { reads: 2, writes: 3 }, () => detailLib.reopenDeal(id, ACTOR));
   await measure("Marcar perda", { reads: 1, writes: 2 }, () => detailLib.markDealLost(id, "preco", null, ACTOR));
   // Apagar documento conta como gravação: negociação + ~50 registros + tarefas.
   await measure("Excluir negociação (com 5 tarefas e ~50 registros)", { reads: 70, writes: 80 }, () => detailLib.deleteDeal(converted.id === id ? id : id, ACTOR));
@@ -1090,14 +1090,14 @@ await scenario("33. Ciclo completo de uma negociação (todas as ações em sequ
   const other = await dealsLib.createPipeline({ board_id: pipeline.board_id, name: "Ciclo 2", description: null, stages: [{ id: "ciclo001", name: "A", color: "slate", probability: 10 }, { id: "ciclo002", name: "B", color: "slate", probability: 60 }], custom_fields: [] }, ACTOR);
   await detailLib.moveDealToPipeline(id, { pipeline_id: other.id, stage_id: "ciclo002", version: await v() }, ACTOR);
   check((await state()).pipeline_id === other.id, "7. trocou de funil");
-  await detailLib.markDealWon(id, { product_id: null, product_name: "Venda ciclo", monthly_cents: 10000, signed_date: "2026-11-19" }, ACTOR);
+  await detailLib.markDealWon(id, { product_id: null, product_name: "Venda ciclo", kind: "recorrente", setup_cents: 0, one_time_cents: 0, monthly_cents: 10000, signed_date: "2026-11-19" }, ACTOR);
   check((await state()).status === "vendida" && (await db.collection("contracts").where("deal_id", "==", id).get()).size === 1, "8. vendeu (1 contrato)");
   const blockedMove = await dealsLib.moveDeal({ deal_id: id, stage_id: "ciclo001", position: 0, version: 0 }, ACTOR).then(() => "ok", (e) => e.message);
   check(blockedMove === "deal_closed", "9. vendida não pode ser arrastada");
   await detailLib.reopenDeal(id, ACTOR);
   check((await state()).status === "em_andamento" && (await db.collection("contracts").where("deal_id", "==", id).get()).empty, "10. desfez a venda (contrato removido)");
   await detailLib.markDealLost(id, "timing", "Ano que vem", ACTOR);
-  const wonAfterLost = await detailLib.markDealWon(id, { product_id: null, product_name: "x", monthly_cents: 100, signed_date: "2026-11-19" }, ACTOR).then(() => "ok", (e) => e.message);
+  const wonAfterLost = await detailLib.markDealWon(id, { product_id: null, product_name: "x", kind: "recorrente", setup_cents: 0, one_time_cents: 0, monthly_cents: 100, signed_date: "2026-11-19" }, ACTOR).then(() => "ok", (e) => e.message);
   check((await state()).status === "perdida" && wonAfterLost === "deal_closed", "11. perdeu (e venda direta numa perdida é recusada)");
   await detailLib.reopenDeal(id, ACTOR);
   check((await state()).status === "em_andamento" && (await state()).lost_reason === null, "12. reabriu (motivo da perda limpo)");
@@ -1120,7 +1120,7 @@ await scenario("34. Concorrência cruzada: arrastar + editar + pausar + vender +
       () => dealsLib.moveDeal({ deal_id: id, stage_id: pipeline.stages[2].id, position: 1, version: 1 }, ACTOR),
       () => detailLib.updateDeal(id, 1, { value_cents: 999 }, null, ACTOR),
       () => detailLib.pauseDeal(id, { reason: null, resume_date: null }, ACTOR),
-      () => detailLib.markDealWon(id, { product_id: null, product_name: "Venda", monthly_cents: 100, signed_date: "2026-11-19" }, ACTOR),
+      () => detailLib.markDealWon(id, { product_id: null, product_name: "Venda", kind: "recorrente", setup_cents: 0, one_time_cents: 0, monthly_cents: 100, signed_date: "2026-11-19" }, ACTOR),
       () => detailLib.markDealLost(id, "preco", null, ACTOR),
       () => dealsLib.bulkUpdateDeals({ action: "set_status", ids: [id], value: "em_andamento" }, null, ACTOR),
     ]);
@@ -1154,7 +1154,7 @@ await scenario("35. Telas dependentes: lead excluído, contato/empresa inativado
   check(withInactive?.contact_info?.id === contactId && withInactive?.company_info?.id === companyId, "contato/empresa inativos continuam vinculados e visíveis");
 
   const before = await getDashboardMetrics();
-  await detailLib.markDealWon(id, { product_id: null, product_name: "Plano X", monthly_cents: 25000, signed_date: "2026-11-01" }, ACTOR);
+  await detailLib.markDealWon(id, { product_id: null, product_name: "Plano X", kind: "recorrente", setup_cents: 0, one_time_cents: 0, monthly_cents: 25000, signed_date: "2026-11-01" }, ACTOR);
   const clients = await companiesLib.activeClientIds();
   check(clients.has(companyId), "venda: a empresa passa a ser Cliente");
   const after = await getDashboardMetrics();

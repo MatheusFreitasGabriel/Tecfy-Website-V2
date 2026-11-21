@@ -141,10 +141,19 @@ export function WonModal({ basePath, deal, busy, onClose, onConfirm, onLinkCompa
   const [products, setProducts] = useState<ProductOption[] | null>(null);
   const [loadError, setLoadError] = useState(false);
   const [today] = useState(() => brazilDate(Date.now()));
-  const [form, setForm] = useState({ product_id: "", product_name: "", monthly_value: centsToMasked(deal.value_cents), signed_date: today });
+  const [form, setForm] = useState({
+    product_id: "",
+    product_name: "",
+    kind: "recorrente" as "recorrente" | "unico",
+    monthly_value: centsToMasked(deal.value_cents),
+    setup_value: "",
+    one_time_value: centsToMasked(deal.value_cents),
+    signed_date: today,
+  });
   const OTHER = "__outro__";
   // Sem produtos cadastrados (ou nenhum serve): descreve o que foi vendido.
   const custom = form.product_id === OTHER || (products !== null && products.length === 0);
+  const selected = products?.find((p) => p.id === form.product_id) ?? null;
   const [errors, setErrors] = useState<FieldErrors>({});
 
   useEffect(() => {
@@ -168,30 +177,55 @@ export function WonModal({ basePath, deal, busy, onClose, onConfirm, onLinkCompa
     };
   }, [basePath]);
 
+  const masked = (reais: number | null) => (reais ? maskCurrencyBRL(String(Math.round(reais * 100))) : "");
+  // Produto escolhido: a forma de cobrança e os valores vêm do cadastro (o valor pode ser ajustado).
   const chooseProduct = (id: string) => {
     const product = products?.find((p) => p.id === id);
-    setForm((f) => ({ ...f, product_id: id, monthly_value: product?.monthly_price ? maskCurrencyBRL(String(Math.round(product.monthly_price * 100))) : f.monthly_value }));
-    setErrors((e) => withoutKey(withoutKey(e, "product_id"), "monthly_value"));
+    setForm((f) =>
+      product
+        ? {
+            ...f,
+            product_id: id,
+            kind: product.billing === "unico" ? "unico" : "recorrente",
+            monthly_value: masked(product.monthly_price) || f.monthly_value,
+            setup_value: masked(product.setup_fee),
+            one_time_value: masked(product.one_time_price) || f.one_time_value,
+          }
+        : { ...f, product_id: id },
+    );
+    setErrors({});
   };
 
   const submit = async () => {
     const next: FieldErrors = {};
     if (custom && !form.product_name.trim()) next.product_name = "Descreva o que foi vendido.";
     if (!custom && !form.product_id) next.product_id = "Escolha o produto.";
-    if (!form.monthly_value) next.monthly_value = "Informe o valor mensal fechado.";
+    if (form.kind === "recorrente" && !form.monthly_value) next.monthly_value = "Informe o valor mensal fechado.";
+    if (form.kind === "unico" && !form.one_time_value) next.one_time_value = "Informe o valor fechado.";
     if (Object.keys(next).length) return setErrors(next);
+    const values =
+      form.kind === "unico"
+        ? { kind: "unico", one_time_value: form.one_time_value }
+        : { kind: "recorrente", monthly_value: form.monthly_value, setup_value: form.setup_value };
     const body = custom
-      ? { product_name: form.product_name.trim(), monthly_value: form.monthly_value, signed_date: form.signed_date }
-      : { product_id: form.product_id, monthly_value: form.monthly_value, signed_date: form.signed_date };
+      ? { product_name: form.product_name.trim(), ...values, signed_date: form.signed_date }
+      : { product_id: form.product_id, ...values, signed_date: form.signed_date };
     const result = await onConfirm(body);
     if (typeof result === "object") setErrors(result);
   };
+  const termMonths = selected ? (selected.billing === "unico" ? null : 8) : form.kind === "unico" ? null : 8;
+  const priceLabel = (x: ProductOption) =>
+    x.billing === "unico"
+      ? `${x.one_time_price ? formatMoney(Math.round(x.one_time_price * 100)) : "—"} (único)`
+      : x.monthly_price
+        ? `${formatMoney(Math.round(x.monthly_price * 100))}/mês`
+        : (x.price_label ?? "sob consulta").toLowerCase();
 
   const noCompany = !deal.company_info;
   return (
     <Modal
       title="Registrar venda 🎉"
-      description="Cria o contrato: a empresa passa a Cliente e o valor mensal entra no faturamento do dashboard."
+      description="Cria o contrato: a empresa passa a Cliente e o valor entra no faturamento do dashboard."
       onClose={() => !busy && onClose()}
       widthClass="max-w-[600px]"
       closeStyle="boxed"
@@ -225,7 +259,7 @@ export function WonModal({ basePath, deal, busy, onClose, onConfirm, onLinkCompa
                   {...p}
                   placeholder="Selecione o produto"
                   options={[
-                    ...products.map((x) => ({ value: x.id, label: `${x.name} · ${x.monthly_price ? `${formatMoney(Math.round(x.monthly_price * 100))}/mês` : (x.price_label ?? "sob consulta")}` })),
+                    ...products.map((x) => ({ value: x.id, label: `${x.name} · ${priceLabel(x)}` })),
                     { value: OTHER, label: "Outro (descrever o que foi vendido)" },
                   ]}
                   value={form.product_id}
@@ -247,15 +281,45 @@ export function WonModal({ basePath, deal, busy, onClose, onConfirm, onLinkCompa
               )}
             </Field>
           )}
+          {custom && (
+            <div role="radiogroup" aria-label="Forma de cobrança" className="grid grid-cols-2 gap-2.5">
+              {(["recorrente", "unico"] as const).map((k) => (
+                <label
+                  key={k}
+                  className={`flex cursor-pointer items-center gap-2 rounded-xl p-3 text-sm font-semibold outline outline-1 -outline-offset-1 ${
+                    form.kind === k ? "bg-admin-tip text-text-primary outline-admin-accent" : "bg-admin-input text-admin-text-label outline-admin-input-border"
+                  }`}
+                >
+                  <input type="radio" name="won-kind" checked={form.kind === k} onChange={() => setForm((f) => ({ ...f, kind: k }))} className="accent-admin-primary" />
+                  {k === "recorrente" ? "Mensalidade" : "Pagamento único"}
+                </label>
+              ))}
+            </div>
+          )}
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-            <Field label="Valor mensal fechado" required error={errors.monthly_value} hint="Fica gravado no contrato (mudanças de preço depois não afetam).">
-              {(p) => <TextInput {...p} inputMode="numeric" placeholder="R$ 0,00" value={form.monthly_value} onChange={(e) => setForm((f) => ({ ...f, monthly_value: maskCurrencyBRL(e.target.value) }))} />}
-            </Field>
+            {form.kind === "recorrente" ? (
+              <>
+                <Field label="Valor mensal fechado" required error={errors.monthly_value} hint="Fica gravado no contrato (mudanças de preço depois não afetam).">
+                  {(p) => <TextInput {...p} inputMode="numeric" placeholder="R$ 0,00" value={form.monthly_value} onChange={(e) => setForm((f) => ({ ...f, monthly_value: maskCurrencyBRL(e.target.value) }))} />}
+                </Field>
+                <Field label="Taxa de implantação" error={errors.setup_value} hint="Opcional. Cobrada uma vez; entra na receita do ano.">
+                  {(p) => <TextInput {...p} inputMode="numeric" placeholder="R$ 0,00" value={form.setup_value} onChange={(e) => setForm((f) => ({ ...f, setup_value: maskCurrencyBRL(e.target.value) }))} />}
+                </Field>
+              </>
+            ) : (
+              <Field label="Valor fechado (pagamento único)" required error={errors.one_time_value} hint="Entra na receita do ano, não no faturamento mensal.">
+                {(p) => <TextInput {...p} inputMode="numeric" placeholder="R$ 0,00" value={form.one_time_value} onChange={(e) => setForm((f) => ({ ...f, one_time_value: maskCurrencyBRL(e.target.value) }))} />}
+              </Field>
+            )}
             <Field label="Data da venda" required error={errors.signed_date}>
               {(p) => <input {...p} type="date" max={today} value={form.signed_date} onChange={(e) => setForm((f) => ({ ...f, signed_date: e.target.value }))} className={`${inputClass} h-11`} />}
             </Field>
           </div>
-          <p className="text-xs text-admin-text-hint">Contrato com permanência mínima de 8 meses; continua ativo mês a mês até ser cancelado.</p>
+          <p className="text-xs text-admin-text-hint">
+            {termMonths
+              ? "Contrato com a fidelidade do produto (8 meses se não houver outra); continua ativo mês a mês até ser cancelado na tela Produtos."
+              : "Pagamento único: a venda fica registrada no produto e na empresa, sem mensalidade."}
+          </p>
         </div>
       )}
     </Modal>

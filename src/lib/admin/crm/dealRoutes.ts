@@ -27,6 +27,7 @@ import {
   InvalidFileError,
   NeedsCompanyError,
   ProductNotFoundError,
+  WonKindMismatchError,
   StorageNotConfiguredError,
 } from "./dealDetail";
 import { EmailProviderError, RecipientNotAllowedError } from "./email";
@@ -78,6 +79,9 @@ export function dealDetailErrorResponse(error: unknown, label: string): Response
   if (error instanceof NeedsCompanyError) return Response.json({ error: "needs_company" }, { status: 409 });
   if (error instanceof DealClosedError) return Response.json({ error: "deal_closed" }, { status: 409 });
   if (error instanceof ProductNotFoundError) return Response.json({ error: "invalid_input", fields: { product_id: "Produto não encontrado." } }, { status: 400 });
+  if (error instanceof WonKindMismatchError) {
+    return Response.json({ error: "invalid_input", fields: { product_id: "A forma de cobrança mudou neste produto. Escolha o produto de novo." } }, { status: 400 });
+  }
   if (error instanceof StorageNotConfiguredError) return Response.json({ error: "storage_not_configured" }, { status: 503 });
   if (error instanceof InvalidFileError) return Response.json({ error: "invalid_file", reason: error.reason }, { status: 400 });
   if (error instanceof DuplicateFileError) return Response.json({ error: "duplicate_file", existing: error.existing }, { status: 409 });

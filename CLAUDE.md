@@ -183,8 +183,7 @@ the 409 branch in `Form.tsx` is now unused).
   writes a `system` note with the diff (`crm/diff.ts`); nothing is deleted — `status: ativo|inativo` instead
   (missing = ativo). Unique e-mail per contact (`contact_emails`) and unique CNPJ per company
   (`company_cnpjs`, `crm/companyIndex.ts`) — also enforced in "Criar lead"/"Vincular" (reuses the existing one).
-  A company is **Cliente** when it has an active `contracts` doc with its `company_id` (Products screen, future;
-  the user owns that design), otherwise "Prospect". Timelines for all three use `crm/notes.ts`
+  A company is **Cliente** when it has an active `contracts` doc with its `company_id`, otherwise "Prospect". Timelines for all three use `crm/notes.ts`
   (`listNotes`/`addNote` by parent collection) and the shared `components/admin/shared/NotesTimeline`.
 - **Negociações** (`crm/deals.ts`, `crm/dealValidation.ts`, UI in `components/admin/deals/`): **board → pipelines →
   stages (max 6)**. `boards`, `pipelines` (`stages: [{id,name,color,probability}]`, `custom_fields`), `deals`
@@ -201,8 +200,9 @@ the 409 branch in `Form.tsx` is now unused).
 - **Deal page** (`/negociacoes/[id]`, `crm/dealDetail.ts`, UI in `components/admin/deal-detail/`): edits go through
   `PATCH …/api/crm/deals/[id]` with `version` (optimistic concurrency → 409 `stale`), one history entry per changed
   field; linking contact/company only fills an empty link. **Won** = `POST …/won` (product read from `products`,
-  never written) creates `contracts/deal_<id>` (idempotent; needs `company_id`; `monthly_value` in reais like the
-  dashboard expects); **reopen** a won deal deletes that contract. Files: Firebase Storage (`FIREBASE_STORAGE_BUCKET`,
+  never written; `kind` recorrente|unico must match the product's billing) creates `contracts/deal_<id>` (idempotent;
+  needs `company_id`; `billing`, `monthly_value`/`setup_value`/`one_time_value` in reais); **reopen** a won deal deletes
+  that contract unless it is already cancelled (real billing history stays). Files: Firebase Storage (`FIREBASE_STORAGE_BUCKET`,
   private bucket) via 5-min signed PUT (`x-goog-content-length-range`) → `POST …/files/[fileId]` re-checks size, magic
   bytes (PDF / OOXML zip) and SHA-256 (dedupe per deal) on the server; downloads are 5-min signed URLs, logged in
   history. Bucket CORS: `scripts/storage-setup.mjs`. Queries here use equality filters only (no composite indexes).
@@ -223,10 +223,20 @@ the 409 branch in `Form.tsx` is now unused).
   (lead id from import_id+line → idempotent, `import_id` on the lead), "update" = fixed-id system note on the existing
   lead, "fill" = only EMPTY contact/company fields via `updateContact`/`updateCompany` (never overwrites). History in
   `lead_imports` (tag `crm-imports`). Matching companies by site uses `CompanyRow.website`.
+- **Produtos** (`/produtos`, `/produtos/[id]`, `crm/products.ts`, `crm/productValidation.ts`, UI in
+  `components/admin/products/`): catalog with KPI cards + one card per product (stats from `listContracts`).
+  `billing` = mensal | sob_consulta | unico (docs without it: mensal if `monthly_price`, else sob_consulta — `toProduct`),
+  plus `one_time_price`, `setup_fee`, `min_term_months`, `features`, `color` (stage palette → `--admin-stage-*`), `icon`,
+  `highlight`, `active`, `sort`. Changes go to `products/{id}/history`. Never deleted once sold (only deactivated);
+  delete allowed only with zero contracts. **Revenue** (`revenue.ts` `computeStats`): active contracts and monthly =
+  recurring only; annual = monthly × months billed + setup/one-time signed in the current year. **Cancel contract** =
+  `POST …/api/crm/contracts/[id]/cancel` (date + `cancelReasons`), logged on the deal and the product; cancelling
+  inside the fidelity term is allowed with a warning. Cache: `getCachedProducts`/`getCachedProductDetail`, tags
+  `crm-products`, `crm-contracts` (won/reopen/cancel invalidate it).
 - Message templates: built-ins in code (`BUILTIN_TEMPLATES`, read-only) + custom ones in
   `message_templates` (`POST …/api/crm/templates`).
 - `scripts/crm-setup.mjs migrate-leads [--apply]` converts pre-v2 website leads (dry-run by default).
-- Don't seed or edit `products` — the user manages that.
+- Don't seed or edit `products` data from scripts — the user manages the catalog through the Produtos screen.
 
 ### Theming (Tailwind v4, CSS-first)
 There is **no `tailwind.config.js`**. All design tokens are CSS variables defined in

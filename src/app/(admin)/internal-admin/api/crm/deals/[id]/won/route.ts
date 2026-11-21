@@ -10,7 +10,8 @@ export const dynamic = "force-dynamic";
 type Context = { params: Promise<{ id: string }> };
 
 /**
- * Marca como vendida: `{ product_id, monthly_value: "R$ 1.200,00", signed_date: "AAAA-MM-DD" }`.
+ * Marca como vendida: `{ product_id | product_name, kind: "recorrente"|"unico", monthly_value, setup_value,
+ * one_time_value ("R$ 1.200,00"), signed_date: "AAAA-MM-DD" }`.
  * Cria o contrato (empresa vira Cliente; entra no faturamento). Exige empresa vinculada.
  * Resposta: 200 { deal } · 400 { fields } · 401 · 404 · 409 needs_company.
  */
@@ -26,7 +27,7 @@ export async function POST(request: Request, { params }: Context) {
     const fresh = await getDealDetail(id);
     if (!fresh) return crmResponses.notFound();
     // Cliente/Prospect e o faturamento dependem dos contratos: empresas também mudam.
-    invalidateCrm(CRM_TAGS.deals, CRM_TAGS.companies, companyTag(fresh.company?.id));
+    invalidateCrm(CRM_TAGS.deals, CRM_TAGS.companies, CRM_TAGS.contracts, companyTag(fresh.company?.id));
     return Response.json({ deal: fresh });
   } catch (error) {
     return dealDetailErrorResponse(error, "markDealWon");

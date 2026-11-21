@@ -21,7 +21,7 @@ export async function POST(request: Request, { params }: Context) {
     const fresh = await getDealDetail(id);
     if (!fresh) return crmResponses.notFound();
     // Cliente/Prospect e o faturamento dependem dos contratos: empresas também mudam.
-    invalidateCrm(CRM_TAGS.deals, CRM_TAGS.companies, companyTag(fresh.company?.id));
+    invalidateCrm(CRM_TAGS.deals, CRM_TAGS.companies, CRM_TAGS.contracts, companyTag(fresh.company?.id));
     return Response.json({ deal: fresh });
   } catch (error) {
     return dealDetailErrorResponse(error, "reopenDeal");

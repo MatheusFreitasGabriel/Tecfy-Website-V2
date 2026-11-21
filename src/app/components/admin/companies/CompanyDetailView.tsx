@@ -79,7 +79,7 @@ export default function CompanyDetailView({ company, initialNotes, basePath }: C
   const [refreshing, startRefresh] = useTransition();
   const notes = useNotes(initialNotes);
   const active = company.status === "ativo";
-  const activeContracts = company.contracts.filter((c) => c.status === "active");
+  const activeContracts = company.contracts.filter((c) => c.status === "active" && c.billing !== "unico");
   const monthly = activeContracts.reduce((sum, c) => sum + c.monthly_value, 0);
   const address = [
     [company.address.street, company.address.number].filter(Boolean).join(", "),
@@ -254,7 +254,10 @@ export default function CompanyDetailView({ company, initialNotes, basePath }: C
                       <p className="truncate text-sm font-semibold text-text-primary">{c.product_name}</p>
                       <p className="text-xs text-admin-table-subtext">Desde {formatDate(c.signed_at)}</p>
                     </div>
-                    <span className="text-sm font-semibold text-text-primary">{brl.format(c.monthly_value)}/mês</span>
+                    <span className="text-right text-sm font-semibold text-text-primary">
+                      {c.billing === "unico" ? `${brl.format(c.one_time_total)} único` : `${brl.format(c.monthly_value)}/mês`}
+                      {c.billing !== "unico" && c.one_time_total > 0 && <span className="block text-[11px] font-medium text-admin-table-subtext">+ {brl.format(c.one_time_total)} implantação</span>}
+                    </span>
                     <span className={`rounded-md px-2 py-0.5 text-[11px] font-semibold ${c.status === "active" ? "bg-admin-qual-sure text-admin-qual-sure-text" : "bg-admin-badge text-admin-text-hint"}`}>
                       {c.status === "active" ? "Ativo" : "Cancelado"}
                     </span>

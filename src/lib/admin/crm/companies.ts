@@ -6,7 +6,7 @@ import { ContactNotFoundError, createContact, toLeadSummary, type PageCursor } f
 import { describeCompanyChanges } from "./diff";
 import type { Actor } from "./leads";
 import { NOTES_SUBCOLLECTION, systemNoteData } from "./notes";
-import { companyRegions, companySegments, companySizes, entityStatuses, type EntityStatus } from "./options";
+import { companyRegions, companySegments, companySizes, entityStatuses, productBillings, type EntityStatus } from "./options";
 import {
   COMPANIES_COLLECTION,
   CONTACTS_COLLECTION,
@@ -99,7 +99,9 @@ export async function getCompanyDetail(id: string): Promise<CompanyDetail | null
   const contractRows: ContractSummary[] = contracts.docs.map((c) => ({
     id: c.id,
     product_name: str(c.get("product_name")) ?? "Produto",
+    billing: productBillings.is(c.get("billing")) ? c.get("billing") : "mensal",
     monthly_value: typeof c.get("monthly_value") === "number" ? c.get("monthly_value") : 0,
+    one_time_total: (typeof c.get("setup_value") === "number" ? c.get("setup_value") : 0) + (typeof c.get("one_time_value") === "number" ? c.get("one_time_value") : 0),
     status: c.get("status") === "active" ? "active" : "cancelled",
     signed_at: iso(c.get("signed_at")),
   }));

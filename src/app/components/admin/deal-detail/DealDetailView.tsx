@@ -375,7 +375,12 @@ export default function DealDetailView(props: DealDetailViewProps) {
         <p className="flex flex-wrap items-center gap-2 rounded-xl bg-admin-deal-won px-4 py-3 text-sm font-medium text-admin-deal-won-text">
           <FaCheck aria-hidden className="h-3.5 w-3.5" />
           Vendida em {formatDate(deal.won_at)}
-          {deal.contract && ` · ${deal.contract.product_name} · ${formatMoney(Math.round(deal.contract.monthly_value * 100))}/mês — contrato ativo, empresa é Cliente.`}
+          {deal.contract &&
+            (deal.contract.billing === "unico"
+              ? ` · ${deal.contract.product_name} · ${formatMoney(Math.round(deal.contract.one_time_total * 100))} (pagamento único) — empresa é Cliente.`
+              : ` · ${deal.contract.product_name} · ${formatMoney(Math.round(deal.contract.monthly_value * 100))}/mês${
+                  deal.contract.one_time_total ? ` + ${formatMoney(Math.round(deal.contract.one_time_total * 100))} de implantação` : ""
+                } — ${deal.contract.status === "cancelled" ? "contrato cancelado." : "contrato ativo, empresa é Cliente."}`)}
         </p>
       )}
       {deal.status === "pausada" && (

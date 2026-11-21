@@ -30,6 +30,8 @@ export const CRM_TAGS = {
   products: "crm-products",
   /** Histórico da tela "Importar lista". */
   imports: "crm-imports",
+  /** Contratos (venda, reabrir, cancelar): números da tela Produtos. */
+  contracts: "crm-contracts",
 } as const;
 export type CrmTag = (typeof CRM_TAGS)[keyof typeof CRM_TAGS];
 
@@ -198,10 +200,27 @@ export async function getCachedDeals(): Promise<{ deals: DealRow[]; truncated: b
 }
 
 /** Produtos ativos para "Marcar como venda" (só leitura; a tela Produtos é do usuário). 5 min de cache. */
-export const getCachedProductOptions = unstable_cache(async () => (await import("./dealDetail")).listProductOptions(), ["crm-products-v1"], {
+export const getCachedProductOptions = unstable_cache(async () => (await import("./dealDetail")).listProductOptions(), ["crm-products-v2"], {
   tags: [CRM_TAGS.products],
   revalidate: 300,
 });
+
+/** Tag de UM produto (página do produto). */
+export const productTag = (id: string | null | undefined) => (id ? `crm-product-${id}` : null);
+
+/** Catálogo com os números de cada produto (dependem dos contratos). */
+export const getCachedProducts = unstable_cache(async () => (await import("./products")).listProducts(), ["crm-products-list-v1"], {
+  tags: [CRM_TAGS.products, CRM_TAGS.contracts],
+  revalidate: 3600,
+});
+
+/** Página do produto: contratos com nome da empresa → também depende de empresas. */
+export function getCachedProductDetail(id: string) {
+  return unstable_cache(async () => (await import("./products")).getProductDetail(id), ["crm-product-detail-v1", id], {
+    tags: [productTag(id)!, CRM_TAGS.products, CRM_TAGS.contracts, CRM_TAGS.companies],
+    revalidate: 3600,
+  })();
+}
 
 // ── Tarefas ─────────────────────────────────────────────────────────────────
 

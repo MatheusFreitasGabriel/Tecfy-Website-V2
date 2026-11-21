@@ -7,7 +7,9 @@ import {
   DEAL_FILE_TYPES,
   dealStatuses,
   lostReasons,
+  productBillings,
 } from "./options";
+import { toProduct } from "./products";
 import {
   BOARDS_COLLECTION,
   COMPANIES_COLLECTION,
@@ -49,6 +51,12 @@ export class NeedsCompanyError extends Error {
 export class ProductNotFoundError extends Error {
   constructor() {
     super("product_not_found");
+  }
+}
+/** A venda veio como mensalidade para um produto de pagamento único (ou o contrário). */
+export class WonKindMismatchError extends Error {
+  constructor() {
+    super("won_kind_mismatch");
   }
 }
 export { DealClosedError };
@@ -138,7 +146,9 @@ export async function getDealDetail(id: string, opts: { openTaskDue?: string[] }
       ? {
           id: contract!.id,
           product_name: String(c.product_name ?? ""),
+          billing: productBillings.is(c.billing) ? c.billing : "mensal",
           monthly_value: typeof c.monthly_value === "number" ? c.monthly_value : 0,
+          one_time_total: (typeof c.setup_value === "number" ? c.setup_value : 0) + (typeof c.one_time_value === "number" ? c.one_time_value : 0),
           status: c.status === "cancelled" ? "cancelled" : "active",
           signed_at: iso(c.signed_at),
         }
@@ -178,16 +188,18 @@ export async function listDealHistory(id: string, limit = 500): Promise<DealHist
 export async function listProductOptions(): Promise<ProductOption[]> {
   const snap = await getAdminDb().collection(PRODUCTS_COLLECTION).get();
   return snap.docs
-    .filter((d) => d.get("active") !== false)
-    .map((d) => ({
-      id: d.id,
-      name: str(d.get("name")) ?? "Produto",
-      monthly_price: typeof d.get("monthly_price") === "number" ? d.get("monthly_price") : null,
-      price_label: str(d.get("price_label")),
-      sort: typeof d.get("sort") === "number" ? d.get("sort") : 0,
-    }))
+    .map(toProduct)
+    .filter((p) => p.active)
     .sort((a, b) => a.sort - b.sort || a.name.localeCompare(b.name, "pt-BR"))
-    .map((p) => ({ id: p.id, name: p.name, monthly_price: p.monthly_price, price_label: p.price_label }));
+    .map((p) => ({
+      id: p.id,
+      name: p.name,
+      billing: p.billing,
+      monthly_price: p.monthly_price,
+      one_time_price: p.one_time_price,
+      setup_fee: p.setup_fee,
+      price_label: p.price_label,
+    }));
 }
 
 // ── Edição ───────────────────────────────────────────────────────────────────
@@ -301,9 +313,12 @@ export async function markDealWon(id: string, input: WonInput, actor: Actor): Pr
     if (snap.get("status") === "vendida" && contract.exists) return;
     if (snap.get("status") === "perdida") throw new DealClosedError(); // reabra antes de vender
     if (product && (!product.exists || product.get("active") === false)) throw new ProductNotFoundError();
+    const catalog = product?.exists ? toProduct(product) : null;
+    if (catalog && (catalog.billing === "unico") !== (input.kind === "unico")) throw new WonKindMismatchError();
     const companyId = str(snap.get("company_id"));
     if (!companyId) throw new NeedsCompanyError();
-    const productName = product ? (str(product.get("name")) ?? "Produto") : (input.product_name ?? "Venda");
+    const productName = catalog ? catalog.name : (input.product_name ?? "Venda");
+    const billing = catalog ? catalog.billing : input.kind === "unico" ? "unico" : "mensal";
     const signedAt = Timestamp.fromDate(brazilDateTime(input.signed_date, "12:00"));
     tx.set(contractRef, {
       lead_id: str(snap.get("lead_id")) ?? "",
@@ -311,11 +326,14 @@ export async function markDealWon(id: string, input: WonInput, actor: Actor): Pr
       company_id: companyId,
       product_id: product?.id ?? "",
       product_name: productName,
+      billing,
       monthly_value: input.monthly_cents / 100,
+      setup_value: input.setup_cents / 100,
+      one_time_value: input.one_time_cents / 100,
       status: "active",
       signed_at: signedAt,
       cancelled_at: null,
-      min_term_months: CONTRACT_MIN_TERM_MONTHS,
+      min_term_months: billing === "unico" ? 0 : (catalog?.min_term_months ?? CONTRACT_MIN_TERM_MONTHS),
       created_by_uid: actor.uid,
       created_by_name: actor.name,
       created_at: FieldValue.serverTimestamp(),
@@ -331,7 +349,11 @@ export async function markDealWon(id: string, input: WonInput, actor: Actor): Pr
       updated_at: FieldValue.serverTimestamp(),
       last_activity_at: FieldValue.serverTimestamp(),
     });
-    tx.create(ref.collection(DEAL_HISTORY_SUBCOLLECTION).doc(), historyData("won", "Venda registrada 🎉", `${productName} · ${money(input.monthly_cents)}/mês · assinada em ${dateBr(input.signed_date)}`, actor));
+    const value =
+      input.kind === "unico"
+        ? `${money(input.one_time_cents)} (pagamento único)`
+        : `${money(input.monthly_cents)}/mês${input.setup_cents ? ` + ${money(input.setup_cents)} de implantação` : ""}`;
+    tx.create(ref.collection(DEAL_HISTORY_SUBCOLLECTION).doc(), historyData("won", "Venda registrada 🎉", `${productName} · ${value} · assinada em ${dateBr(input.signed_date)}`, actor));
   }, { maxAttempts: MAX_ATTEMPTS });
 }
 
@@ -366,7 +388,10 @@ export async function reopenDeal(id: string, actor: Actor): Promise<void> {
     const status = snap.get("status");
     if (status !== "vendida" && status !== "perdida") return;
     const contractId = str(snap.get("contract_id"));
-    if (status === "vendida" && contractId) tx.delete(db.collection(CONTRACTS_COLLECTION).doc(contractId));
+    const contract = status === "vendida" && contractId ? await tx.get(db.collection(CONTRACTS_COLLECTION).doc(contractId)) : null;
+    // Venda registrada por engano: o contrato some. Contrato já CANCELADO é histórico real de
+    // faturamento: fica (só desliga da negociação).
+    if (contract?.exists && contract.get("status") !== "cancelled") tx.delete(contract.ref);
     tx.update(ref, {
       status: "em_andamento",
       contract_id: null,

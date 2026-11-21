@@ -228,6 +228,45 @@ export const stageColors = defineOptions([
 ] as const);
 export type StageColor = (typeof stageColors.options)[number]["value"];
 
+// ── Produtos ─────────────────────────────────────────────────────────────────
+
+/** Como o produto é cobrado. Produtos antigos sem o campo: mensal se tiver preço, senão sob consulta. */
+export const productBillings = defineOptions([
+  { value: "mensal", label: "Mensal", hint: "Mensalidade fixa, com fidelidade mínima." },
+  { value: "sob_consulta", label: "Sob consulta", hint: "Mensalidade negociada em cada venda." },
+  { value: "unico", label: "Pagamento único", hint: "Projeto ou serviço pago uma vez só (não entra no faturamento mensal)." },
+] as const);
+export type ProductBilling = (typeof productBillings.options)[number]["value"];
+
+/** Ícones disponíveis para o produto (nomes ligados aos ícones Font Awesome em `productVisuals`). */
+export const productIcons = defineOptions([
+  { value: "rocket", label: "Foguete" },
+  { value: "code", label: "Código" },
+  { value: "globe", label: "Site" },
+  { value: "layers", label: "Camadas" },
+  { value: "mobile", label: "App" },
+  { value: "cart", label: "Loja" },
+  { value: "chart", label: "Dados" },
+  { value: "robot", label: "Automação" },
+  { value: "headset", label: "Suporte" },
+  { value: "handshake", label: "Parceria" },
+  { value: "gem", label: "Premium" },
+  { value: "box", label: "Pacote" },
+] as const);
+export type ProductIcon = (typeof productIcons.options)[number]["value"];
+
+/** Motivos de cancelamento de contrato. */
+export const cancelReasons = defineOptions([
+  { value: "preco", label: "Preço" },
+  { value: "insatisfacao", label: "Insatisfação com o serviço" },
+  { value: "encerrou", label: "Encerrou as atividades / projeto" },
+  { value: "concorrente", label: "Foi para um concorrente" },
+  { value: "interno", label: "Trouxe para dentro (equipe própria)" },
+  { value: "inadimplencia", label: "Inadimplência" },
+  { value: "upgrade", label: "Trocou de plano" },
+  { value: "outro", label: "Outro motivo" },
+] as const);
+
 /** Motivos de perda da negociação. */
 export const lostReasons = defineOptions([
   { value: "preco", label: "Preço" },

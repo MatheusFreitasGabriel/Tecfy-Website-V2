@@ -26,6 +26,8 @@ import type {
   LeadSource,
   LeadStage,
   LeadStatus,
+  ProductBilling,
+  ProductIcon,
 } from "./options";
 
 export const PRODUCTS_COLLECTION = "products";
@@ -46,13 +48,30 @@ export const LEAD_SCHEMA_VERSION = 2;
 /** Fidelidade mínima de todo plano. Depois disso o contrato segue ativo até ser cancelado. */
 export const CONTRACT_MIN_TERM_MONTHS = 8;
 
-export interface Product {
-  id: string;
+/** Cadastro do produto (o que a tela Produtos grava). Valores em reais. */
+export interface ProductData {
   name: string;
-  /** Preço mensal em reais; null = "sob consulta" (o valor é definido na venda). */
+  description: string | null;
+  billing: ProductBilling;
+  /** Preço mensal (billing "mensal"). */
   monthly_price: number | null;
-  price_label: string | null;
+  /** Preço do pagamento único (billing "unico"). */
+  one_time_price: number | null;
+  /** Taxa de implantação cobrada uma vez junto da mensalidade (mensal / sob consulta). */
+  setup_fee: number | null;
+  /** Fidelidade mínima (recorrentes). */
+  min_term_months: number | null;
+  features: string[];
+  color: StageColor;
+  icon: ProductIcon;
+  highlight: boolean;
   active: boolean;
+}
+
+export interface Product extends ProductData {
+  id: string;
+  /** Texto antigo ("SOB CONSULTA") dos produtos criados antes da tela. */
+  price_label: string | null;
   sort: number;
 }
 
@@ -64,13 +83,71 @@ export interface Contract {
   product_id: string;
   /** Nome do produto no momento da venda. */
   product_name: string;
-  /** Valor mensal acordado na venda (em reais). */
+  /** Contratos antigos (sem o campo) = mensal. */
+  billing: ProductBilling;
+  /** Valor mensal acordado na venda (em reais). 0 no pagamento único. */
   monthly_value: number;
+  /** Taxa de implantação cobrada na venda (reais). */
+  setup_value: number;
+  /** Valor do pagamento único (reais). */
+  one_time_value: number;
   status: ContractStatus;
   /** Data em que o cliente assinou / a venda foi marcada. */
   signed_at: Date;
   cancelled_at: Date | null;
   min_term_months: number;
+}
+
+/** Números de um produto (ou do catálogo inteiro). */
+export interface ProductStats {
+  /** Contratos recorrentes ativos. */
+  active_contracts: number;
+  /** Faturamento mensal dos ativos (reais). */
+  mrr: number;
+  /** Receita no ano corrente: mensalidades cobradas + implantação/único assinados no ano (reais). */
+  year_revenue: number;
+  cancelled: number;
+  /** Vendas de pagamento único. */
+  one_time_sales: number;
+  total_contracts: number;
+}
+
+export interface ProductRow extends Product {
+  stats: ProductStats;
+  created_at: string | null;
+}
+
+export interface ContractRow {
+  id: string;
+  company: { id: string; name: string } | null;
+  deal: { id: string; title: string } | null;
+  product_id: string;
+  product_name: string;
+  billing: ProductBilling;
+  monthly_value: number;
+  setup_value: number;
+  one_time_value: number;
+  status: ContractStatus;
+  /** ISO. */
+  signed_at: string | null;
+  cancelled_at: string | null;
+  cancel_reason: string | null;
+  min_term_months: number;
+  /** Último mês da fidelidade ("AAAA-MM"); null = sem fidelidade. */
+  term_end: string | null;
+}
+
+export interface ProductHistoryRow {
+  id: string;
+  title: string;
+  description: string | null;
+  author_name: string | null;
+  created_at: string | null;
+}
+
+export interface ProductDetail extends ProductRow {
+  contracts: ContractRow[];
+  history: ProductHistoryRow[];
 }
 
 // ── Dados gravados (sem id, timestamps e autoria — esses o servidor adiciona) ──
@@ -253,7 +330,10 @@ export interface DealSummary {
 export interface ContractSummary {
   id: string;
   product_name: string;
+  billing: ProductBilling;
   monthly_value: number;
+  /** Implantação + pagamento único (reais). */
+  one_time_total: number;
   status: "active" | "cancelled";
   signed_at: string | null;
 }
@@ -464,7 +544,7 @@ export interface DealDetail extends DealRow {
   lost_at: string | null;
   lost_detail: string | null;
   paused_reason: string | null;
-  contract: { id: string; product_name: string; monthly_value: number; status: "active" | "cancelled"; signed_at: string | null } | null;
+  contract: ContractSummary | null;
   contact_info: { id: string; name: string; email: string | null; phone: string | null; role: string | null } | null;
   company_info: {
     id: string;
@@ -499,11 +579,14 @@ export interface DealFileRow {
   created_at: string | null;
 }
 
-/** Produto para "Marcar como venda" (só leitura — a tela Produtos é do usuário). */
+/** Produto ativo para "Marcar como vendida". */
 export interface ProductOption {
   id: string;
   name: string;
+  billing: ProductBilling;
   /** Reais; null = sob consulta. */
   monthly_price: number | null;
+  one_time_price: number | null;
+  setup_fee: number | null;
   price_label: string | null;
 }

@@ -547,8 +547,14 @@ export interface WonInput {
   product_id: string | null;
   /** Descrição livre do que foi vendido (quando não há produto cadastrado que sirva). */
   product_name: string | null;
-  /** Centavos (mensal). */
+  /** Recorrente (mensalidade) ou pagamento único. Com produto cadastrado, o servidor confere com a cobrança dele. */
+  kind: "recorrente" | "unico";
+  /** Centavos (mensal). 0 no pagamento único. */
   monthly_cents: number;
+  /** Centavos da taxa de implantação (recorrente). 0 = sem taxa. */
+  setup_cents: number;
+  /** Centavos do pagamento único. 0 no recorrente. */
+  one_time_cents: number;
   signed_date: string;
 }
 
@@ -558,12 +564,26 @@ export function parseWon(body: Record<string, unknown>): WonInput | { errors: Fi
   const productName = clean(body.product_name).slice(0, 81);
   if (!productId && !productName) errors.product_id = "Escolha o produto ou descreva o que foi vendido.";
   if (!productId && productName.length > 80) errors.product_name = "Use até 80 caracteres.";
-  const cents = parseCurrencyToCents(str(body.monthly_value));
-  if (!cents || cents <= 0 || cents > DEAL_LIMITS.maxCents) errors.monthly_value = "Informe o valor mensal fechado.";
+  const kind = body.kind === "unico" ? "unico" : "recorrente";
+  const cents = (field: string) => parseCurrencyToCents(str(body[field])) ?? 0;
+  const monthly = kind === "recorrente" ? cents("monthly_value") : 0;
+  const setup = kind === "recorrente" ? cents("setup_value") : 0;
+  const oneTime = kind === "unico" ? cents("one_time_value") : 0;
+  if (kind === "recorrente" && (monthly <= 0 || monthly > DEAL_LIMITS.maxCents)) errors.monthly_value = "Informe o valor mensal fechado.";
+  if (setup > DEAL_LIMITS.maxCents) errors.setup_value = "Valor alto demais.";
+  if (kind === "unico" && (oneTime <= 0 || oneTime > DEAL_LIMITS.maxCents)) errors.one_time_value = "Informe o valor fechado.";
   const date = str(body.signed_date);
   if (!isValidDate(date)) errors.signed_date = "Informe a data da venda.";
   if (Object.keys(errors).length) return { errors };
-  return { product_id: productId, product_name: productId ? null : productName, monthly_cents: cents!, signed_date: date };
+  return {
+    product_id: productId,
+    product_name: productId ? null : productName,
+    kind,
+    monthly_cents: monthly,
+    setup_cents: setup,
+    one_time_cents: oneTime,
+    signed_date: date,
+  };
 }
 
 export function parseLost(body: Record<string, unknown>, reasons: readonly string[]): { reason: string; detail: string | null } | { errors: FieldErrors } {
