@@ -37,13 +37,39 @@ function getAdminApp(): App {
     throw new Error("Firebase Admin: variáveis FIREBASE_PROJECT_ID / FIREBASE_CLIENT_EMAIL / FIREBASE_PRIVATE_KEY ausentes.");
   }
 
-  return initializeApp({
-    credential: cert({
-      projectId,
-      clientEmail,
-      privateKey: normalizePrivateKey(privateKey),
-    }),
-  });
+  try {
+    return initializeApp({
+      credential: cert({
+        projectId,
+        clientEmail,
+        privateKey: normalizePrivateKey(privateKey),
+      }),
+    });
+  } catch (error) {
+    // Diagnóstico SEM o conteúdo da chave: só o formato, para achar erro de colagem na Vercel.
+    console.error("firebase private key shape", JSON.stringify(describePrivateKey(privateKey)));
+    throw error;
+  }
+}
+
+/** Formato da chave (nunca o valor): tamanho, cabeçalhos, tipo de quebra de linha e caracteres fora do base64. */
+function describePrivateKey(raw: string) {
+  const key = normalizePrivateKey(raw);
+  const body = key.replace(/-----(BEGIN|END) [A-Z ]+-----/g, "").replace(/\n/g, "");
+  return {
+    rawLength: raw.length,
+    quoted: /^\s*["']/.test(raw),
+    begin: /-----BEGIN PRIVATE KEY-----/.test(key),
+    beginRsa: /-----BEGIN RSA PRIVATE KEY-----/.test(key),
+    end: /-----END PRIVATE KEY-----/.test(key),
+    literalBackslashN: (raw.match(/\\n/g) ?? []).length,
+    realNewlines: (raw.match(/\n/g) ?? []).length,
+    carriageReturns: (raw.match(/\r/g) ?? []).length,
+    bodyLength: body.length,
+    bodyLengthMod4: body.length % 4,
+    spacesInBody: (body.match(/ /g) ?? []).length,
+    otherNonBase64: (body.replace(/ /g, "").match(/[^A-Za-z0-9+/=]/g) ?? []).length,
+  };
 }
 
 export function getAdminDb(): Firestore {
