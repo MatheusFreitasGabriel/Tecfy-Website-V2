@@ -30,6 +30,10 @@ touching any transaction in `src/lib/admin/crm/`.
 - Default Next 16 bundler (Turbopack); `next.config.ts` is empty
 - ESLint 9 + `eslint-config-next` 16 (flat config). ESLint 10 is **not** compatible with the
   bundled `eslint-plugin-react` — don't bump it.
+- `package.json` `overrides` pins `jwks-rsa`'s `jose` to **5.x**: `jwks-rsa` (used by `firebase-admin/auth`)
+  does `require('jose')` and jose 6 is ESM-only; on Vercel's runtime that threw `ERR_REQUIRE_ESM` and the
+  admin login returned 500. Don't remove it unless `jwks-rsa` ships ESM. Check with
+  `node --no-experimental-require-module -e "require('jwks-rsa')"`. `engines.node` is `22.x`.
 - Fonts: local **InstrumentSans** loaded via `@font-face` in `src/styles/globals.css` (this repo
   does *not* use `next/font`; the README's mention of Geist is stale boilerplate)
 - `swiper` (carousels), `react-icons` (plan/feature icons), `@calcom/embed-react` (scheduling)
