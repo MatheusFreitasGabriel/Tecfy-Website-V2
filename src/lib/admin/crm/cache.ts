@@ -269,17 +269,11 @@ export async function getCachedTasks(): Promise<{ tasks: TaskRow[]; truncated: b
 
 /** Contratos (serializáveis) para o gráfico de faturamento e os indicadores do Dashboard. */
 export const getCachedContracts = unstable_cache(
-  async (): Promise<import("./dashboardMetrics").ContractLite[]> =>
-    (await (await import("./contracts")).listContracts()).map((c) => ({
-      product_name: c.product_name || "Venda",
-      billing: c.billing,
-      monthly_value: c.monthly_value,
-      setup_value: c.setup_value,
-      one_time_value: c.one_time_value,
-      status: c.status,
-      signed_at: c.signed_at.toISOString(),
-      cancelled_at: c.cancelled_at?.toISOString() ?? null,
-    })),
-  ["crm-contracts-lite-v1"],
-  { tags: [CRM_TAGS.contracts], revalidate: 3600 },
+  async (): Promise<import("./dashboardMetrics").ContractLite[]> => {
+    const [contracts, companies] = await Promise.all([(await import("./contracts")).listContractsLite(), getCachedCompanies().catch(() => null)]);
+    const names = new Map((companies?.companies ?? []).map((c) => [c.id, c.trade_name]));
+    return contracts.map((c) => ({ ...c, company_name: c.company_id ? (names.get(c.company_id) ?? null) : null }));
+  },
+  ["crm-contracts-lite-v2"],
+  { tags: [CRM_TAGS.contracts, CRM_TAGS.companies], revalidate: 3600 },
 );

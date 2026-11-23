@@ -57,6 +57,33 @@ export async function listContracts(): Promise<Contract[]> {
   return snap.docs.map(toContract).filter((c): c is Contract => c !== null);
 }
 
+/** Contratos para o Dashboard (com id, produto, empresa e fidelidade), já serializáveis. */
+export async function listContractsLite(): Promise<{ id: string; product_id: string; product_name: string; company_id: string | null; min_term_months: number; billing: Contract["billing"]; monthly_value: number; setup_value: number; one_time_value: number; status: ContractStatus; signed_at: string; cancelled_at: string | null }[]> {
+  const snap = await getAdminDb()
+    .collection(CONTRACTS_COLLECTION)
+    .select(...CONTRACT_FIELDS, "company_id")
+    .get();
+  return snap.docs.flatMap((doc) => {
+    const c = toContract(doc);
+    if (!c) return [];
+    const company = doc.get("company_id");
+    return [{
+      id: c.id,
+      product_id: c.product_id,
+      product_name: c.product_name || "Venda",
+      company_id: typeof company === "string" && company ? company : null,
+      min_term_months: c.billing === "unico" ? 0 : c.min_term_months,
+      billing: c.billing,
+      monthly_value: c.monthly_value,
+      setup_value: c.setup_value,
+      one_time_value: c.one_time_value,
+      status: c.status,
+      signed_at: c.signed_at.toISOString(),
+      cancelled_at: c.cancelled_at?.toISOString() ?? null,
+    }];
+  });
+}
+
 export async function getDashboardMetrics(): Promise<DashboardMetrics> {
   return computeDashboardMetrics(await listContracts());
 }

@@ -7,7 +7,13 @@ import type { ProductBilling, LeadSource } from "./options";
 
 /** Contrato em formato serializável (vai do servidor para o gráfico). */
 export interface ContractLite {
+  id: string;
+  product_id: string;
   product_name: string;
+  /** Nome da empresa (do cache de empresas), quando houver. */
+  company_name: string | null;
+  /** Fidelidade mínima (meses); 0 = sem. */
+  min_term_months: number;
   billing: ProductBilling;
   monthly_value: number;
   setup_value: number;
@@ -198,4 +204,146 @@ export function computeSummary(input: { contracts: ContractLite[]; leads: LeadLi
       .sort((a, b) => b.mrr - a.mrr)
       .slice(0, 5),
   };
+}
+
+// ── Precisa de atenção ───────────────────────────────────────────────────────
+
+export interface AttentionRow {
+  id: string;
+  title: string;
+  detail: string;
+  /** Caminho relativo ao painel ("/negociacoes/x"). */
+  path: string;
+  danger?: boolean;
+}
+export interface AttentionSection {
+  key: "tasks" | "deals" | "leads" | "renewals";
+  title: string;
+  /** Total (a lista mostra só os primeiros). */
+  count: number;
+  rows: AttentionRow[];
+  /** "Ver todos". */
+  path: string;
+}
+
+export interface AttentionInput {
+  contracts: ContractLite[];
+  leads: { id: string; title: string; stage: string; status: string; created_at: string | null }[] | null;
+  deals: { id: string; title: string; status: string; last_activity_at: string | null; updated_at: string | null; created_at: string | null }[] | null;
+  tasks: { id: string; title: string; due_at: string; done_at: string | null; assignee_uid: string | null; parent: { label: string } | null }[] | null;
+  promos: { productId: string; productName: string; name: string; ends_at: string | null; starts_at: string }[];
+}
+
+const dayFmt = new Intl.DateTimeFormat("en-CA", { timeZone: "America/Sao_Paulo", year: "numeric", month: "2-digit", day: "2-digit" });
+const timeFmt = new Intl.DateTimeFormat("pt-BR", { timeZone: "America/Sao_Paulo", hour: "2-digit", minute: "2-digit" });
+const shortFmt = new Intl.DateTimeFormat("pt-BR", { timeZone: "America/Sao_Paulo", day: "2-digit", month: "2-digit" });
+const days = (ms: number) => Math.floor(ms / DAY);
+const plural = (n: number, one: string, many: string) => `${n} ${n === 1 ? one : many}`;
+const CLOSED_LEAD = new Set(["perdido", "convertido", "arquivado"]);
+
+/** Último mês da fidelidade ("AAAA-MM") — mesma regra de `termEndMonth` em revenue.ts. */
+function termEnd(signedAt: string, months: number): string | null {
+  if (!months || months < 1) return null;
+  return addMonths(monthKey(signedAt), months - 1);
+}
+
+/** O que pede ação hoje: tarefas, negociações paradas, leads sem contato e renovações. */
+export function computeAttention(input: AttentionInput, uid: string | null, now: number, limit = 3): AttentionSection[] {
+  const today = dayFmt.format(new Date(now));
+  const sections: AttentionSection[] = [];
+
+  // 1. Suas tarefas: atrasadas primeiro, depois as de hoje.
+  const mine = (input.tasks ?? [])
+    .filter((t) => !t.done_at && (!uid || t.assignee_uid === uid) && dayFmt.format(new Date(t.due_at)) <= today)
+    .sort((a, b) => Date.parse(a.due_at) - Date.parse(b.due_at));
+  sections.push({
+    key: "tasks",
+    title: "Suas tarefas",
+    count: mine.length,
+    path: "/tarefas",
+    rows: mine.slice(0, limit).map((t) => {
+      const late = Date.parse(t.due_at) < now;
+      const isToday = dayFmt.format(new Date(t.due_at)) === today;
+      return {
+        id: t.id,
+        title: t.title,
+        detail: [late ? (isToday ? `Atrasada · era ${timeFmt.format(new Date(t.due_at))}` : `Atrasada desde ${shortFmt.format(new Date(t.due_at))}`) : `Hoje · ${timeFmt.format(new Date(t.due_at))}`, t.parent?.label].filter(Boolean).join(" · "),
+        path: "/tarefas",
+        danger: late,
+      };
+    }),
+  });
+
+  // 2. Negociações abertas sem atividade há mais de 14 dias.
+  const stalled = (input.deals ?? [])
+    .filter((d) => d.status === "em_andamento")
+    .map((d) => ({ d, idle: now - Date.parse(d.last_activity_at ?? d.updated_at ?? d.created_at ?? new Date(now).toISOString()) }))
+    .filter((x) => x.idle > 14 * DAY)
+    .sort((a, b) => b.idle - a.idle);
+  sections.push({
+    key: "deals",
+    title: "Negociações paradas",
+    count: stalled.length,
+    path: "/negociacoes",
+    rows: stalled.slice(0, limit).map(({ d, idle }) => ({ id: d.id, title: d.title, detail: `Sem atividade há ${plural(days(idle), "dia", "dias")}`, path: `/negociacoes/${d.id}` })),
+  });
+
+  // 3. Leads ainda em "Novo lead" há mais de 2 dias.
+  const waiting = (input.leads ?? [])
+    .filter((l) => l.stage === "novo" && !CLOSED_LEAD.has(l.status) && l.created_at && now - Date.parse(l.created_at) > 2 * DAY)
+    .sort((a, b) => Date.parse(a.created_at!) - Date.parse(b.created_at!));
+  sections.push({
+    key: "leads",
+    title: "Leads sem contato",
+    count: waiting.length,
+    path: "/leads",
+    rows: waiting.slice(0, limit).map((l) => ({ id: l.id, title: l.title, detail: `Chegou há ${plural(days(now - Date.parse(l.created_at!)), "dia", "dias")}`, path: "/leads" })),
+  });
+
+  // 4. Fidelidade acabando (este mês ou o próximo) + promoções acabando em até 7 dias.
+  const current = monthKey(now);
+  const next = addMonths(current, 1);
+  const renewals: AttentionRow[] = input.contracts
+    .filter((c) => c.status === "active" && c.billing !== "unico")
+    .map((c) => ({ c, end: termEnd(c.signed_at, c.min_term_months) }))
+    .filter((x): x is { c: ContractLite; end: string } => x.end !== null && (x.end === current || x.end === next))
+    .sort((a, b) => a.end.localeCompare(b.end))
+    .map(({ c, end }) => ({
+      id: c.id,
+      title: c.company_name ?? c.product_name,
+      detail: `${c.product_name} · fidelidade até ${end.slice(5)}/${end.slice(0, 4)}`,
+      path: `/produtos/${c.product_id}?aba=contratos`,
+      danger: end === current,
+    }));
+  const promos: AttentionRow[] = input.promos
+    .filter((p) => p.ends_at && Date.parse(p.starts_at) <= now && Date.parse(p.ends_at) > now && Date.parse(p.ends_at) - now <= 7 * DAY)
+    .map((p) => ({ id: `promo-${p.productId}`, title: `Promoção ${p.name}`, detail: `${p.productName} · acaba em ${shortFmt.format(new Date(p.ends_at!))}`, path: `/produtos/${p.productId}?aba=promocoes` }));
+  const ending = [...renewals, ...promos];
+  sections.push({ key: "renewals", title: "Renovações e promoções", count: ending.length, path: "/produtos", rows: ending.slice(0, limit) });
+
+  return sections;
+}
+
+// ── Funil comercial ──────────────────────────────────────────────────────────
+
+export interface FunnelStep {
+  label: string;
+  value: number;
+  hint: string;
+}
+
+/**
+ * Funil de uma mesma turma: leads criados nos últimos 90 dias → quantos viraram negociação →
+ * quantas dessas negociações foram vendidas.
+ */
+export function computeFunnel(leads: (LeadLite & { id: string })[] | null, deals: (DealLite & { lead_id: string | null })[] | null, now: number): FunnelStep[] {
+  const recent = (leads ?? []).filter((l) => l.created_at && now - Date.parse(l.created_at) <= 90 * DAY);
+  const ids = new Set(recent.map((l) => l.id));
+  const converted = recent.filter((l) => l.deal_id).length;
+  const won = (deals ?? []).filter((d) => d.status === "vendida" && d.lead_id && ids.has(d.lead_id)).length;
+  return [
+    { label: "Leads", value: recent.length, hint: "entraram nos últimos 90 dias" },
+    { label: "Negociações", value: converted, hint: "desses leads" },
+    { label: "Vendas", value: won, hint: "dessas negociações" },
+  ];
 }

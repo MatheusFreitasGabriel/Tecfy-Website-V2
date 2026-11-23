@@ -1,5 +1,6 @@
 "use client";
 
+import { useSearchParams } from "next/navigation";
 import { useMemo, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { FaCalendarDays, FaClock, FaListUl, FaPlus, FaSun, FaTriangleExclamation, FaXmark } from "react-icons/fa6";
@@ -42,7 +43,9 @@ export default function TasksView({ tasks, truncated, admins, basePath, currentU
   const router = useRouter();
   const now = useNow();
   const [view, setView] = useState<View>(initialView);
-  const [modal, setModal] = useState<ModalState>(null);
+  // "+ Tarefa" do Dashboard chega com ?nova=1 e já abre o cadastro.
+  const searchParams = useSearchParams();
+  const [modal, setModal] = useState<ModalState>(() => (searchParams.get("nova") === "1" ? { kind: "create", date: null } : null));
   const [notice, setNotice] = useState<{ text: string; tone: "ok" | "error" } | null>(null);
   const [busyIds, setBusyIds] = useState<Set<string>>(new Set());
   const [bulkBusy, setBulkBusy] = useState(false);
@@ -282,7 +285,14 @@ export default function TasksView({ tasks, truncated, admins, basePath, currentU
           currentUid={currentUid}
           task={modal.kind === "edit" ? modal.task : null}
           defaultDate={modal.kind === "create" ? modal.date : null}
-          onClose={() => setModal(null)}
+          onClose={() => {
+            setModal(null);
+            const url = new URL(window.location.href);
+            if (url.searchParams.has("nova")) {
+              url.searchParams.delete("nova");
+              window.history.replaceState(null, "", url.pathname + url.search + url.hash);
+            }
+          }}
           onCreated={(task) => {
             upsert(task);
             setModal(null);

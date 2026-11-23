@@ -16,6 +16,8 @@ interface KpiCardProps {
   alert?: boolean;
   /** Leva para a tela de detalhe. */
   href?: string;
+  /** sm = faixa do topo do Dashboard (mais baixo, número menor). */
+  size?: "sm" | "md";
 }
 
 const pct = new Intl.NumberFormat("pt-BR", { style: "percent", maximumFractionDigits: 1, signDisplay: "always" });
@@ -24,16 +26,17 @@ const pct = new Intl.NumberFormat("pt-BR", { style: "percent", maximumFractionDi
  * Indicador do painel na identidade do site: moldura de borda fina com o card preto dentro
  * (como os cards de planos da landing), rótulo pequeno em caixa alta e número grande.
  */
-export default function KpiCard({ label, value, hint, illustration, delta, lowerIsBetter, alert, href }: KpiCardProps) {
+export default function KpiCard({ label, value, hint, illustration, delta, lowerIsBetter, alert, href, size = "md" }: KpiCardProps) {
+  const sm = size === "sm";
   const good = delta === null || delta === undefined ? null : lowerIsBetter ? delta < 0 : delta > 0;
   const body = (
-    <div className="flex h-full min-h-[112px] min-w-0 items-center justify-between gap-6 bg-background-secondary px-5 py-5">
-      <div className="flex min-w-0 flex-col gap-3">
+    <div className={`flex h-full min-w-0 items-center justify-between gap-6 bg-background-secondary ${sm ? "min-h-[92px] px-4 py-4" : "min-h-[112px] px-5 py-5"}`}>
+      <div className={`flex min-w-0 flex-col ${sm ? "gap-2" : "gap-3"}`}>
         <p className="flex items-center gap-2 truncate text-[10px] font-semibold uppercase leading-3 tracking-[0.1em] text-white/45">
           {label}
           {href && <FaArrowRight aria-hidden className="h-2.5 w-2.5 opacity-0 transition-opacity group-hover:opacity-100" />}
         </p>
-        <p className={`truncate text-[30px] font-medium leading-8 tracking-tight ${alert ? "text-admin-danger" : "text-text-primary"}`}>{value}</p>
+        <p className={`truncate font-medium tracking-tight ${sm ? "text-[24px] leading-7" : "text-[30px] leading-8"} ${alert ? "text-admin-danger" : "text-text-primary"}`}>{value}</p>
         {(hint || (delta !== null && delta !== undefined)) && (
           <p className="flex min-w-0 items-center gap-2 text-xs leading-4 text-white/40">
             {delta !== null && delta !== undefined && delta !== 0 && (

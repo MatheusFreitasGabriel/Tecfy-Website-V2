@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { useSearchParams } from "next/navigation";
 import { useState } from "react";
 import { FaFileImport, FaPlus } from "react-icons/fa6";
 import type { AdminUserOption, LeadRow } from "@/lib/admin/crm/types";
@@ -18,9 +19,20 @@ interface LeadsHeaderProps {
 
 const integer = new Intl.NumberFormat("pt-BR");
 
+/** Tira o atalho (?novo=1 / ?nova=1) da URL para não reabrir o modal ao recarregar. */
+function clearShortcut(param: string) {
+  const url = new URL(window.location.href);
+  if (!url.searchParams.has(param)) return;
+  url.searchParams.delete(param);
+  window.history.replaceState(null, "", url.pathname + url.search + url.hash);
+}
+
+
 /** Topo da tela de Leads: título + total, descrição e as ações "Importar lista" / "Criar lead". */
 export default function LeadsHeader({ total, basePath, admins, currentUid, onCreated }: LeadsHeaderProps) {
-  const [creating, setCreating] = useState(false);
+  // "+ Lead" do Dashboard chega com ?novo=1 e já abre o cadastro.
+  const searchParams = useSearchParams();
+  const [creating, setCreating] = useState(() => searchParams.get("novo") === "1");
 
   return (
     <header className="flex flex-col gap-6 md:flex-row md:items-start md:justify-between">
@@ -57,7 +69,10 @@ export default function LeadsHeader({ total, basePath, admins, currentUid, onCre
           basePath={basePath}
           admins={admins}
           currentUid={currentUid}
-          onClose={() => setCreating(false)}
+          onClose={() => {
+            setCreating(false);
+            clearShortcut("novo");
+          }}
           onCreated={onCreated}
         />
       )}
