@@ -46,7 +46,7 @@ export function ProductIconBox({ icon, color, size = "md" }: { icon: ProductIcon
   const Icon = PRODUCT_ICONS[icon];
   const box = size === "lg" ? "h-14 w-14 rounded-2xl" : "h-11 w-11 rounded-xl";
   return (
-    <span style={colorVar(color)} className={`flex shrink-0 items-center justify-center bg-(--pc)/15 text-(--pc) ${box}`}>
+    <span style={colorVar(color)} className={`flex shrink-0 items-center justify-center border border-border-card bg-white/[0.03] text-white ${box}`}>
       <Icon aria-hidden className={size === "lg" ? "h-6 w-6" : "h-5 w-5"} />
     </span>
   );
@@ -118,7 +118,7 @@ export function GoalBar({ value, goal }: { value: number; goal: number }) {
         </span>
       </div>
       <div className="h-1.5 overflow-hidden rounded-full bg-admin-badge" role="progressbar" aria-valuemin={0} aria-valuemax={100} aria-valuenow={Math.round(Math.min(1, ratio) * 100)} aria-label="Meta mensal">
-        <div className={`h-full rounded-full ${ratio >= 1 ? "bg-admin-success" : "bg-(--pc)"}`} style={{ width: `${Math.min(100, Math.round(ratio * 100))}%` }} />
+        <div className={`h-full rounded-full ${ratio >= 1 ? "bg-admin-success" : "bg-white"}`} style={{ width: `${Math.min(100, Math.round(ratio * 100))}%` }} />
       </div>
     </div>
   );

@@ -1,7 +1,7 @@
 "use client";
 
 import { useRef, useState } from "react";
-import { FaArrowDown, FaArrowUp, FaCheck, FaGlobe, FaPlus, FaXmark } from "react-icons/fa6";
+import { FaArrowDown, FaArrowUp, FaGlobe, FaPlus, FaXmark } from "react-icons/fa6";
 import PlanCard from "@/app/components/public/home/plans/PlanCard";
 import { useClock } from "@/app/components/public/home/plans/useClock";
 import { productBillings, productIcons, siteSections, stageColors, type ProductBilling, type ProductIcon } from "@/lib/admin/crm/options";
@@ -315,28 +315,10 @@ export default function ProductFormModal({ basePath, product, onClose, onSaved, 
           </Field>
 
           {/* Aparência */}
-          <div className="grid gap-6 sm:grid-cols-2">
+          <div>
             <fieldset>
-              <legend className="mb-2 text-[13px] font-medium leading-[19px] text-admin-text-label">Cor</legend>
-              <div className="flex flex-wrap gap-2">
-                {stageColors.options.map((c) => (
-                  <button
-                    key={c.value}
-                    type="button"
-                    aria-label={c.label}
-                    aria-pressed={form.color === c.value}
-                    onClick={() => set("color", c.value)}
-                    style={colorVar(c.value)}
-                    className={`flex h-9 w-9 items-center justify-center rounded-full bg-(--pc) transition-transform hover:scale-110 ${form.color === c.value ? "ring-2 ring-text-primary ring-offset-2 ring-offset-background-kpi" : ""}`}
-                  >
-                    {form.color === c.value && <FaCheck aria-hidden className="h-3.5 w-3.5 text-black" />}
-                  </button>
-                ))}
-              </div>
-            </fieldset>
-            <fieldset>
-              <legend className="mb-2 text-[13px] font-medium leading-[19px] text-admin-text-label">Ícone</legend>
-              <div className="grid grid-cols-6 gap-1.5">
+              <legend className="mb-2 text-[11px] font-semibold uppercase tracking-[0.06em] text-white/55">Ícone (só no painel)</legend>
+              <div className="grid grid-cols-8 gap-1.5 sm:grid-cols-12">
                 {productIcons.options.map((o) => {
                   const Icon = PRODUCT_ICONS[o.value];
                   const selected = form.icon === o.value;
@@ -349,7 +331,7 @@ export default function ProductFormModal({ basePath, product, onClose, onSaved, 
                       aria-pressed={selected}
                       onClick={() => set("icon", o.value)}
                       style={colorVar(color)}
-                      className={`flex h-9 items-center justify-center rounded-lg transition-colors ${selected ? "bg-(--pc)/20 text-(--pc) outline outline-1 outline-(--pc)" : "bg-admin-input text-admin-text-hint hover:text-text-primary"}`}
+                      className={`flex h-9 items-center justify-center rounded-lg transition-colors ${selected ? "bg-white text-background" : "bg-admin-input text-admin-text-hint hover:text-text-primary"}`}
                     >
                       <Icon aria-hidden className="h-4 w-4" />
                     </button>
@@ -423,7 +405,7 @@ export default function ProductFormModal({ basePath, product, onClose, onSaved, 
           <div style={colorVar(color)} className={`rounded-2xl bg-background p-3 outline outline-1 -outline-offset-1 outline-admin-card-border ${form.site_visible && form.active ? "" : "opacity-60"}`}>
             <PlanCard plan={previewPlan} now={now} preview />
           </div>
-          <p className="text-xs font-medium leading-4 text-admin-text-hint">Cor e ícone do produto aparecem só no painel. No site valem o destaque, os textos e os ícones dos itens.</p>
+          <p className="text-xs font-medium leading-4 text-admin-text-hint">O ícone do produto aparece só no painel. No site valem o destaque, os textos e os ícones dos itens.</p>
         </aside>
       </div>
     </Modal>

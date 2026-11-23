@@ -353,12 +353,12 @@ export default function DealsView({ deals, truncated, boards, pipelines, admins,
       </div>
 
       {/* Indicadores */}
-      <dl className="grid grid-cols-2 gap-4 xl:grid-cols-4">
+      <div className="grid grid-cols-2 gap-4 xl:grid-cols-4">
         <Kpi icon={FaHandshake} label="Negociações abertas" value={integer.format(openDeals.length)} detail={`${integer.format(won.length)} vendidas · ${integer.format(lost.length)} perdidas`} />
         <Kpi icon={FaSquarePollVertical} label="Valor em aberto" value={formatMoneyCompact(values.total)} detail={`Ponderado ${formatMoneyCompact(values.weighted)} · Vendido ${formatMoneyCompact(wonValue)}`} />
         <Kpi icon={FaClock} label="Tarefas para hoje" value={now === null ? "—" : integer.format(tasks.today)} detail="Ainda no horário" />
         <Kpi icon={FaTriangleExclamation} label="Tarefas atrasadas" value={now === null ? "—" : integer.format(tasks.overdue)} detail={tasks.overdue ? "Precisam de atenção" : "Tudo em dia"} danger={tasks.overdue > 0} />
-      </dl>
+      </div>
 
       {/* Filtros */}
       <div className="flex flex-col gap-3">
@@ -548,13 +548,15 @@ function PlainSelect({ label, hideLabel, value, onChange, className = "sm:w-[220
 
 function Kpi({ icon: Icon, label, value, detail, danger }: { icon: React.ComponentType<{ className?: string; "aria-hidden"?: boolean }>; label: string; value: string; detail: string; danger?: boolean }) {
   return (
-    <div className={`flex flex-col gap-2 rounded-2xl bg-background-kpi p-5 outline outline-1 -outline-offset-1 ${danger ? "outline-admin-danger/40" : "outline-admin-card-border"}`}>
-      <dt className="flex items-center gap-2 text-[13px] font-medium text-admin-text-description">
-        <Icon aria-hidden className={`h-3.5 w-3.5 ${danger ? "text-admin-danger" : "text-admin-accent"}`} />
-        {label}
-      </dt>
-      <dd className={`text-[26px] font-semibold leading-8 ${danger ? "text-admin-danger" : "text-text-primary"}`}>{value}</dd>
-      <dd className="text-xs font-medium text-admin-text-hint">{detail}</dd>
+    <div role="group" aria-label={label} className={`border p-1.5 transition-colors ${danger ? "border-admin-danger/40" : "border-border-primary hover:border-border-secondary"}`}>
+      <div className="flex h-full flex-col gap-3 bg-background-secondary p-5">
+        <span className="flex items-center gap-2 text-[10px] font-semibold uppercase tracking-[0.1em] text-white/45">
+          <Icon aria-hidden className={`h-3 w-3 ${danger ? "text-admin-danger" : "text-white/60"}`} />
+          {label}
+        </span>
+        <span className={`text-[30px] font-medium leading-8 tracking-tight ${danger ? "text-admin-danger" : "text-text-primary"}`}>{value}</span>
+        <span className="text-xs text-white/40">{detail}</span>
+      </div>
     </div>
   );
 }

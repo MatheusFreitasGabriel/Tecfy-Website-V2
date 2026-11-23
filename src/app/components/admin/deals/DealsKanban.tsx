@@ -147,6 +147,7 @@ export default function DealsKanban({ pipeline, deals, now, highlightId, onMove,
 
   return (
     <DndContext
+      id="deals-kanban"
       sensors={sensors}
       collisionDetection={closestCorners}
       onDragStart={onDragStart}

@@ -517,6 +517,61 @@ body:has(.admin-shell) {
   --radius: 0;
 }
 
+/* Painel admin: etiquetas de significado (qualificação, status da negociação…) no estilo do site:
+   fundo preto, borda fina, caixa alta e a cor só numa bolinha. Vale para todo <span> com esses fundos. */
+body:has(.admin-shell) span.bg-admin-qual-hot { --tag-dot: var(--admin-qual-hot-text); }
+body:has(.admin-shell) span.bg-admin-qual-warm { --tag-dot: var(--admin-qual-warm-text); }
+body:has(.admin-shell) span.bg-admin-qual-cold { --tag-dot: var(--admin-qual-cold-text); }
+body:has(.admin-shell) span.bg-admin-qual-sure { --tag-dot: var(--admin-qual-sure-text); }
+body:has(.admin-shell) span.bg-admin-deal-progress { --tag-dot: var(--admin-deal-progress-text); }
+body:has(.admin-shell) span.bg-admin-deal-paused { --tag-dot: var(--admin-deal-paused-text); }
+body:has(.admin-shell) span.bg-admin-deal-lost { --tag-dot: var(--admin-deal-lost-text); }
+body:has(.admin-shell) span.bg-admin-deal-won { --tag-dot: var(--admin-deal-won-text); }
+body:has(.admin-shell) :is(span.bg-admin-qual-hot, span.bg-admin-qual-warm, span.bg-admin-qual-cold, span.bg-admin-qual-sure, span.bg-admin-deal-progress, span.bg-admin-deal-paused, span.bg-admin-deal-lost, span.bg-admin-deal-won) {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  border: 1px solid var(--border-secondary);
+  background: transparent;
+  color: rgb(255 255 255 / 0.9);
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+body:has(.admin-shell) :is(span.bg-admin-qual-hot, span.bg-admin-qual-warm, span.bg-admin-qual-cold, span.bg-admin-qual-sure, span.bg-admin-deal-progress, span.bg-admin-deal-paused, span.bg-admin-deal-lost, span.bg-admin-deal-won)::before {
+  content: "";
+  width: 6px;
+  height: 6px;
+  flex-shrink: 0;
+  border-radius: 999px;
+  background: var(--tag-dot);
+}
+
+/* Painel admin: selects coloridos (qualificação na tabela) ganham a borda fina do site. */
+body:has(.admin-shell) :is(select.bg-admin-qual-hot, select.bg-admin-qual-warm, select.bg-admin-qual-cold, select.bg-admin-qual-sure) {
+  border: 1px solid var(--border-secondary);
+  background-color: transparent;
+}
+
+/* Painel admin: títulos de tela, cabeçalhos de tabela e abas em caixa alta, como na landing. */
+.admin-shell h1 {
+  text-transform: uppercase;
+  letter-spacing: -0.01em;
+}
+body:has(.admin-shell) thead th {
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+body:has(.admin-shell) [role="tab"] {
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
 /* Painel admin: checkbox (todas as telas e modais do painel; o site público não muda). */
 body:has(.admin-shell) input[type="checkbox"] {
   appearance: none;
@@ -535,8 +590,8 @@ body:has(.admin-shell) input[type="checkbox"] {
 }
 body:has(.admin-shell) input[type="checkbox"]::before {
   content: "";
-  width: 62%;
-  height: 62%;
+  width: 10px;
+  height: 10px;
   transform: scale(0);
   transition: transform 140ms cubic-bezier(0.2, 0.8, 0.2, 1);
   background: #000;

@@ -26,10 +26,10 @@ export default function LeadsHeader({ total, basePath, admins, currentUid, onCre
     <header className="flex flex-col gap-6 md:flex-row md:items-start md:justify-between">
       <div className="flex min-w-0 flex-col gap-2.5">
         <div className="flex items-center gap-4">
-          <h1 className="text-[32px] font-semibold leading-[38px] text-text-primary">Leads</h1>
+          <h1 className="text-[32px] font-semibold leading-[38px] tracking-tight text-text-primary">Leads</h1>
           <span
             aria-label={`${integer.format(total)} leads`}
-            className="flex h-7 min-w-[38px] items-center justify-center rounded-lg bg-admin-badge px-2.5 text-sm font-semibold leading-5 text-admin-badge-text"
+            className="flex h-7 min-w-[38px] items-center justify-center border border-border-secondary px-2.5 text-sm font-semibold leading-5 text-white/70"
           >
             {integer.format(total)}
           </span>
@@ -42,7 +42,7 @@ export default function LeadsHeader({ total, basePath, admins, currentUid, onCre
       <div className="flex shrink-0 flex-wrap gap-4">
         <Link
           href={`${basePath}/leads/importar`}
-          className="inline-flex h-11 items-center justify-center gap-2 whitespace-nowrap rounded-lg bg-background-kpi px-6 text-sm font-semibold leading-5 text-text-primary outline outline-1 -outline-offset-1 outline-admin-picker-border transition-colors hover:bg-admin-badge focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-admin-accent"
+          className="inline-flex h-11 items-center justify-center gap-2 whitespace-nowrap border border-admin-button-border px-6 text-sm font-semibold leading-5 text-text-primary transition-colors hover:border-white/60 hover:bg-white/5 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
         >
           <FaFileImport aria-hidden className="h-3.5 w-3.5" />
           Importar lista

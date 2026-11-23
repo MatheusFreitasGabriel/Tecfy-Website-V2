@@ -157,7 +157,6 @@ export default function ProductDetailView({ basePath, product: p, publishedPlan,
 
       {/* Cabeçalho */}
       <header style={colorVar(p.color)} className="relative overflow-hidden rounded-2xl bg-background-kpi p-6 outline outline-1 -outline-offset-1 outline-admin-card-border">
-        <span aria-hidden className="absolute inset-x-0 top-0 h-1 bg-(--pc)" />
         <div className="flex flex-col gap-6 lg:flex-row lg:items-center lg:justify-between">
           <div className="flex min-w-0 items-center gap-4">
             <ProductIconBox icon={p.icon} color={p.color} size="lg" />
@@ -166,7 +165,7 @@ export default function ProductDetailView({ basePath, product: p, publishedPlan,
               <div className="mt-1.5 flex flex-wrap items-center gap-1.5">
                 <BillingBadge billing={p.billing} />
                 {p.highlight && (
-                  <span className="inline-flex h-6 items-center gap-1 rounded-md bg-(--pc)/15 px-2 text-[11px] font-semibold uppercase tracking-wide text-(--pc)">
+                  <span className="inline-flex h-6 items-center gap-1 border border-border-secondary px-2 text-[10px] font-semibold uppercase tracking-[0.08em] text-white">
                     <FaStar aria-hidden className="h-2.5 w-2.5" /> Destaque
                   </span>
                 )}
@@ -450,7 +449,7 @@ export default function ProductDetailView({ basePath, product: p, publishedPlan,
                 <ul style={colorVar(p.color)} className="mt-3 flex flex-col gap-2.5">
                   {p.features.map((f) => (
                     <li key={f} className="flex items-start gap-2.5 text-sm font-medium leading-5 text-admin-text-label">
-                      <FaCheck aria-hidden className="mt-1 h-3 w-3 shrink-0 text-(--pc)" /> {f}
+                      <FaCheck aria-hidden className="mt-1 h-3 w-3 shrink-0 text-white" /> {f}
                     </li>
                   ))}
                 </ul>

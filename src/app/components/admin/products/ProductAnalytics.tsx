@@ -99,11 +99,11 @@ function LineChart({ months, value, label }: { months: MonthPoint[]; value: (m: 
     <div className="relative">
       <svg viewBox={`0 0 ${W} ${H}`} className="h-auto w-full" role="img" aria-label={`${label} nos últimos 12 meses`} onMouseLeave={() => setHover(null)}>
         <Axis max={max} months={months} format={(v) => (v ? compact.format(v) : "0")} />
-        <path d={area} fill="var(--pc)" fillOpacity={0.12} />
-        <path d={path} fill="none" stroke="var(--pc)" strokeWidth={2} strokeLinejoin="round" strokeLinecap="round" />
+        <path d={area} fill="#FFFFFF" fillOpacity={0.08} />
+        <path d={path} fill="none" stroke="#FFFFFF" strokeWidth={2} strokeLinejoin="round" strokeLinecap="round" />
         {hover !== null && <line x1={x(hover)} x2={x(hover)} y1={PAD.top} y2={PAD.top + innerH} stroke="currentColor" className="text-admin-text-hint" strokeDasharray="3 3" />}
-        <circle cx={x(months.length - 1)} cy={y(value(last))} r={4} fill="var(--pc)" stroke="var(--background-kpi)" strokeWidth={2} />
-        {hover !== null && <circle cx={x(hover)} cy={y(value(months[hover]))} r={5} fill="var(--pc)" stroke="var(--background-kpi)" strokeWidth={2} />}
+        <circle cx={x(months.length - 1)} cy={y(value(last))} r={4} fill="#FFFFFF" stroke="var(--background-secondary)" strokeWidth={2} />
+        {hover !== null && <circle cx={x(hover)} cy={y(value(months[hover]))} r={5} fill="#FFFFFF" stroke="var(--background-secondary)" strokeWidth={2} />}
         {months.map((m, i) => (
           <rect key={m.month} x={PAD.left + step * i} y={PAD.top} width={step} height={innerH} fill="transparent" onMouseEnter={() => setHover(i)} onFocus={() => setHover(i)} tabIndex={-1} />
         ))}
@@ -118,8 +118,8 @@ function LineChart({ months, value, label }: { months: MonthPoint[]; value: (m: 
   );
 }
 
-const SALES_COLOR = "var(--pc)";
-const CANCEL_COLOR = "var(--admin-stage-slate)";
+const SALES_COLOR = "#FFFFFF";
+const CANCEL_COLOR = "#5C5C5C";
 
 /** Vendas novas × cancelamentos por mês (barras lado a lado, uma escala). */
 function SalesBars({ months }: { months: MonthPoint[] }) {
@@ -251,7 +251,7 @@ export default function ProductAnalytics({ product: p, now }: ProductAnalyticsPr
                     {r.reason} <span className="text-text-primary">{r.count}</span>
                   </span>
                   <span className="h-1.5 overflow-hidden rounded-full bg-admin-badge">
-                    <span className="block h-full rounded-full bg-(--pc)" style={{ width: `${(r.count / maxReason) * 100}%` }} />
+                    <span className="block h-full rounded-full bg-white" style={{ width: `${(r.count / maxReason) * 100}%` }} />
                   </span>
                 </li>
               ))}

@@ -12,11 +12,11 @@ export function StatusBadge({ status }: { status: EntityStatus }) {
     <Tooltip label={`Status: ${entityStatuses.label(status)}`} description={entityStatuses.hint(status)}>
       <span
         tabIndex={0}
-        className={`inline-flex h-7 items-center gap-1.5 rounded-lg px-2.5 text-xs font-medium outline-none focus-visible:ring-2 focus-visible:ring-admin-accent ${
-          active ? "bg-admin-success/10 text-admin-success" : "bg-admin-badge text-admin-text-hint"
+        className={`inline-flex h-6 items-center gap-1.5 border px-2 text-[10px] font-semibold uppercase tracking-[0.08em] outline-none focus-visible:ring-2 focus-visible:ring-primary ${
+          active ? "border-border-secondary text-white/90" : "border-border-card text-white/50"
         }`}
       >
-        <FaCircle aria-hidden className="h-1.5 w-1.5" />
+        <FaCircle aria-hidden className={`h-1.5 w-1.5 ${active ? "text-admin-success" : "text-white/30"}`} />
         {entityStatuses.label(status)}
       </span>
     </Tooltip>
@@ -33,8 +33,8 @@ export function ClientBadge({ isClient, compact = false }: { isClient: boolean; 
     >
       <span
         tabIndex={0}
-        className={`inline-flex items-center gap-1 rounded-md px-2 py-0.5 text-[11px] font-semibold outline-none focus-visible:ring-2 focus-visible:ring-admin-accent ${
-          isClient ? "bg-admin-qual-sure text-admin-qual-sure-text" : "bg-admin-badge text-admin-badge-text"
+        className={`inline-flex h-6 items-center gap-1.5 px-2 text-[10px] font-semibold uppercase tracking-[0.08em] outline-none focus-visible:ring-2 focus-visible:ring-admin-accent ${
+          isClient ? "border border-white bg-white text-background" : "border border-border-card text-white/55"
         }`}
       >
         <FaBriefcase aria-hidden className="h-2.5 w-2.5" />

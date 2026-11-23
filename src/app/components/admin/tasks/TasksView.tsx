@@ -224,12 +224,12 @@ export default function TasksView({ tasks, truncated, admins, basePath, currentU
         </div>
       </header>
 
-      <dl className="grid grid-cols-2 gap-4 xl:grid-cols-4">
+      <div role="group" aria-label="Indicadores" className="grid grid-cols-2 gap-4 xl:grid-cols-4">
         <Kpi icon={FaTriangleExclamation} label="Suas atrasadas" value={kpi?.overdue} danger={Boolean(kpi?.overdue)} onClick={() => chooseView("day")} />
         <Kpi icon={FaSun} label="Suas para hoje" value={kpi?.today} onClick={() => chooseView("day")} />
         <Kpi icon={FaClock} label="Seus próximos 7 dias" value={kpi?.week} onClick={() => chooseView("day")} />
         <Kpi icon={FaListUl} label="Abertas no time" value={kpi?.team} onClick={() => chooseView("list")} />
-      </dl>
+      </div>
 
       <div role="tablist" aria-label="Visões das tarefas" className="flex gap-1 border-b border-admin-divider">
         {(
@@ -296,12 +296,14 @@ export default function TasksView({ tasks, truncated, admins, basePath, currentU
 
 function Kpi({ icon: Icon, label, value, danger, onClick }: { icon: React.ComponentType<{ className?: string; "aria-hidden"?: boolean }>; label: string; value: number | undefined; danger?: boolean; onClick: () => void }) {
   return (
-    <button type="button" onClick={onClick} className={`flex flex-col gap-2 rounded-2xl bg-background-kpi p-5 text-left outline outline-1 -outline-offset-1 transition-colors hover:bg-admin-card ${danger ? "outline-admin-danger/40" : "outline-admin-card-border"}`}>
-      <dt className="flex items-center gap-2 text-[13px] font-medium text-admin-text-description">
-        <Icon aria-hidden className={`h-3.5 w-3.5 ${danger ? "text-admin-danger" : "text-admin-accent"}`} />
-        {label}
-      </dt>
-      <dd className={`text-[26px] font-semibold leading-8 ${danger ? "text-admin-danger" : "text-text-primary"}`}>{value === undefined ? "—" : integer.format(value)}</dd>
+    <button type="button" onClick={onClick} className={`border p-1.5 text-left transition-colors ${danger ? "border-admin-danger/40 hover:border-admin-danger" : "border-border-primary hover:border-border-secondary"}`}>
+      <span className="flex h-full flex-col gap-3 bg-background-secondary p-5">
+        <span className="flex items-center gap-2 text-[10px] font-semibold uppercase tracking-[0.1em] text-white/45">
+          <Icon aria-hidden className={`h-3 w-3 ${danger ? "text-admin-danger" : "text-white/60"}`} />
+          {label}
+        </span>
+        <span className={`text-[30px] font-medium leading-8 tracking-tight ${danger ? "text-admin-danger" : "text-text-primary"}`}>{value === undefined ? "—" : integer.format(value)}</span>
+      </span>
     </button>
   );
 }
