@@ -1,8 +1,8 @@
 import { CRM_TAGS, getCachedProductOptions, invalidateCrm } from "@/lib/admin/crm/cache";
 import { guardedWrite } from "@/lib/admin/crm/dealRoutes";
 import { PRODUCT_MAX_BYTES, validateProductForm, type ProductForm } from "@/lib/admin/crm/productValidation";
-import { createProduct } from "@/lib/admin/crm/products";
-import { crmResponses, guardRead } from "@/lib/admin/crm/routeHelpers";
+import { ProductNotFoundError, createProduct, duplicateProduct } from "@/lib/admin/crm/products";
+import { crmResponses, guardRead, isDocId } from "@/lib/admin/crm/routeHelpers";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -22,7 +22,8 @@ export async function GET(request: Request) {
 }
 
 /**
- * Cria um produto: `{ request_id (UUID), product: ProductForm }`. Idempotente pelo request_id.
+ * Cria um produto: `{ request_id (UUID), product: ProductForm }` ou duplica um: `{ request_id, duplicate_of }`.
+ * Idempotente pelo request_id.
  * Resposta: 201 { id } · 400 { fields } · 401.
  */
 export async function POST(request: Request) {
@@ -30,6 +31,18 @@ export async function POST(request: Request) {
   if (guard instanceof Response) return guard;
   const { body, actor } = guard;
   if (typeof body.request_id !== "string" || !UUID.test(body.request_id)) return crmResponses.invalid();
+  if (body.duplicate_of !== undefined) {
+    if (!isDocId(body.duplicate_of)) return crmResponses.invalid();
+    try {
+      const result = await duplicateProduct(body.duplicate_of, actor, body.request_id.toLowerCase());
+      if (result.created) invalidateCrm(CRM_TAGS.products);
+      return Response.json({ id: result.id }, { status: 201 });
+    } catch (error) {
+      if (error instanceof ProductNotFoundError) return crmResponses.notFound();
+      console.error("crm duplicate product error", error instanceof Error ? error.message : "unknown");
+      return crmResponses.internal();
+    }
+  }
   const parsed = validateProductForm((body.product ?? {}) as Partial<ProductForm>);
   if (!parsed.ok) return Response.json({ error: "invalid_input", fields: parsed.errors }, { status: 400 });
   try {

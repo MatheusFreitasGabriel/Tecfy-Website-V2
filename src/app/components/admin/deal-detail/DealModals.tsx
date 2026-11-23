@@ -6,6 +6,7 @@ import { lostReasons } from "@/lib/admin/crm/options";
 import type { AdminUserOption, Board, DealDetail, Pipeline, PickerOption, ProductOption } from "@/lib/admin/crm/types";
 import { validateCustomValues } from "@/lib/admin/crm/dealValidation";
 import { withoutKey, type FieldErrors } from "@/lib/admin/crm/validation";
+import { basePrice, priceAt } from "@/lib/site/plans";
 import { maskCurrencyBRL } from "@/utils/masks";
 import Button from "../form/Button";
 import Combobox from "../form/Combobox";
@@ -13,10 +14,13 @@ import { Field, Select, TextArea, TextInput, inputClass } from "../form/Field";
 import Modal from "../form/Modal";
 import { useCrmOptions } from "../leads/crmOptionsStore";
 import CustomFieldsInputs from "../deals/CustomFieldsInputs";
-import { brazilDate, formatMoney } from "../deals/dealVisuals";
+import { brazilDate, formatMoney, useNow } from "../deals/dealVisuals";
 import { callApi } from "./dealApi";
 
 type SaveResult = boolean | Record<string, string>;
+
+/** Preço vigente do produto (promoção ativa / reajuste que já começou). */
+const currentPrice = (p: ProductOption) => priceAt({ price: basePrice(p), promo: p.promo, price_change: p.price_change }, Date.now()).price;
 
 function Footer({ busy, onClose, submit, label, tone }: { busy: boolean; onClose: () => void; submit: () => void; label: string; tone?: "danger" }) {
   return (
@@ -139,6 +143,7 @@ export function EditDealModal({ deal, pipeline, admins, busy, onClose, onSave }:
 
 export function WonModal({ basePath, deal, busy, onClose, onConfirm, onLinkCompany }: { basePath: string; deal: DealDetail; busy: boolean; onClose: () => void; onConfirm: (body: Record<string, unknown>) => Promise<SaveResult>; onLinkCompany: () => void }) {
   const [products, setProducts] = useState<ProductOption[] | null>(null);
+  const clock = useNow() ?? 0;
   const [loadError, setLoadError] = useState(false);
   const [today] = useState(() => brazilDate(Date.now()));
   const [form, setForm] = useState({
@@ -187,9 +192,9 @@ export function WonModal({ basePath, deal, busy, onClose, onConfirm, onLinkCompa
             ...f,
             product_id: id,
             kind: product.billing === "unico" ? "unico" : "recorrente",
-            monthly_value: masked(product.monthly_price) || f.monthly_value,
+            monthly_value: masked(product.billing === "mensal" ? currentPrice(product) : product.monthly_price) || f.monthly_value,
             setup_value: masked(product.setup_fee),
-            one_time_value: masked(product.one_time_price) || f.one_time_value,
+            one_time_value: masked(product.billing === "unico" ? currentPrice(product) : product.one_time_price) || f.one_time_value,
           }
         : { ...f, product_id: id },
     );
@@ -214,12 +219,15 @@ export function WonModal({ basePath, deal, busy, onClose, onConfirm, onLinkCompa
     if (typeof result === "object") setErrors(result);
   };
   const termMonths = selected ? (selected.billing === "unico" ? null : 8) : form.kind === "unico" ? null : 8;
-  const priceLabel = (x: ProductOption) =>
-    x.billing === "unico"
-      ? `${x.one_time_price ? formatMoney(Math.round(x.one_time_price * 100)) : "—"} (único)`
-      : x.monthly_price
-        ? `${formatMoney(Math.round(x.monthly_price * 100))}/mês`
+  const priceLabel = (x: ProductOption) => {
+    const now = priceAt({ price: basePrice(x), promo: x.promo, price_change: x.price_change }, clock);
+    const promo = now.promo ? ` · promoção ${now.promo.name}` : "";
+    return x.billing === "unico"
+      ? `${now.price ? formatMoney(Math.round(now.price * 100)) : "—"} (único)${promo}`
+      : now.price
+        ? `${formatMoney(Math.round(now.price * 100))}/mês${promo}`
         : (x.price_label ?? "sob consulta").toLowerCase();
+  };
 
   const noCompany = !deal.company_info;
   return (

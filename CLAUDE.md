@@ -236,6 +236,15 @@ the 409 branch in `Form.tsx` is now unused).
 - Message templates: built-ins in code (`BUILTIN_TEMPLATES`, read-only) + custom ones in
   `message_templates` (`POST …/api/crm/templates`).
 - `scripts/crm-setup.mjs migrate-leads [--apply]` converts pre-v2 website leads (dry-run by default).
+- **Site publishing** (`crm/siteCatalog.ts`, `POST …/api/crm/site` publish|restore): products are the DRAFT; "Publicar no site" writes
+  `site_content/plans` + a copy in `site_publications` (restore = old snapshot with current promos). Product fields `site_visible`,
+  `site_section` (monthly|oneTime), `site_price_label`, `site_cta`, `feature_icons` (parallel to `features`), `monthly_goal`. Draft ×
+  published diff = `diffSitePlans` (ignores promo/price_change). Cache tag `crm-site`; `invalidateSite()` also hits `site-plans` + `/`.
+- **Promotions** (`crm/promotions.ts`, `…/products/[id]/promotions[/promoId]`): one at a time, denormalized on `products/{id}.promo`
+  (ISO dates, status derived), history in `products/{id}/promotions`. **Scheduled price change** = `products/{id}.price_change`
+  (`PATCH …/products/[id] {price_change}`), applied lazily by `applyDuePriceChanges` on catalog reads. Both go live immediately by
+  patching the snapshot (`siteSnapshot.ts` `patchPublishedPlan`, point reads in the tx). Won contracts store `promotion_id`/`list_price`.
+  Product page "Visão geral" = pure `crm/productAnalytics.ts` (contracts + website leads where `interest_plan` == product name).
 - Don't seed or edit `products` data from scripts — the user manages the catalog through the Produtos screen.
 
 ### Theming (Tailwind v4, CSS-first)
@@ -247,7 +256,11 @@ When adding UI, use these token classes instead of hardcoded hex/Tailwind palett
 is a fixed dark theme (black background); there is no light-mode toggle.
 
 ### Pricing display
-`plans/PlansCardsData.ts` stores each plan's monthly price, displayed as-is (no discount). Plans with `pricePlan: null` render `priceLabel` (e.g. "SOB CONSULTA") instead.
+The landing plans come from the admin **Produtos** screen. `Plans.tsx` (server) → `getSitePlans()` (`src/lib/site/getSitePlans.ts`,
+`unstable_cache` tag `site-plans`) reads the published snapshot `site_content/plans` (`SitePlan[]`); if never published or Firestore
+fails, it falls back to the static `plans/PlansCardsData.ts` (`fallbackPlans`). `PlanCard.tsx` is the single card component (landing +
+admin previews). Promo / scheduled-price state is time-based and computed at render (`priceAt` in the pure `src/lib/site/plans.ts`),
+re-checked on the client with `useClock`. Home is ISR (`revalidate = 300`) + `revalidatePath("/")` on publish.
 Only the plan **name** string is sent to the API as `interest_plan`.
 
 ### Data colocation

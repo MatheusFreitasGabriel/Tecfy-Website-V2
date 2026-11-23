@@ -1,0 +1,58 @@
+import type { IconType } from "react-icons";
+import {
+  FaArrowLeft,
+  FaBan,
+  FaBezierCurve,
+  FaBoxOpen,
+  FaCartShopping,
+  FaChartBar,
+  FaChartLine,
+  FaCheck,
+  FaClock,
+  FaCode,
+  FaFileLines,
+  FaGear,
+  FaGem,
+  FaGlobe,
+  FaHandshake,
+  FaHeadset,
+  FaLayerGroup,
+  FaMobileScreen,
+  FaMoneyCheckDollar,
+  FaRobot,
+  FaRocket,
+  FaScrewdriverWrench,
+  FaSearchengin,
+  FaWhatsapp,
+} from "react-icons/fa6";
+import type { ProductIcon } from "@/lib/admin/crm/options";
+
+/** Ícones (Font Awesome 6) dos produtos e dos itens dos planos — os mesmos no painel e no site. */
+export const PRODUCT_ICONS: Record<ProductIcon, IconType> = {
+  rocket: FaRocket,
+  code: FaCode,
+  globe: FaGlobe,
+  layers: FaLayerGroup,
+  mobile: FaMobileScreen,
+  cart: FaCartShopping,
+  chart: FaChartLine,
+  robot: FaRobot,
+  headset: FaHeadset,
+  handshake: FaHandshake,
+  gem: FaGem,
+  box: FaBoxOpen,
+  check: FaCheck,
+  file: FaFileLines,
+  bezier: FaBezierCurve,
+  search: FaSearchengin,
+  whatsapp: FaWhatsapp,
+  gear: FaGear,
+  arrow_left: FaArrowLeft,
+  money: FaMoneyCheckDollar,
+  chart_bar: FaChartBar,
+  clock: FaClock,
+  ban: FaBan,
+  wrench: FaScrewdriverWrench,
+};
+
+export const iconOf = (icon: string): IconType => PRODUCT_ICONS[icon as ProductIcon] ?? FaCheck;

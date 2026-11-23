@@ -252,8 +252,34 @@ export const productIcons = defineOptions([
   { value: "handshake", label: "Parceria" },
   { value: "gem", label: "Premium" },
   { value: "box", label: "Pacote" },
+  { value: "check", label: "Check" },
+  { value: "file", label: "Página" },
+  { value: "bezier", label: "Design" },
+  { value: "search", label: "SEO" },
+  { value: "whatsapp", label: "WhatsApp" },
+  { value: "gear", label: "Manutenção" },
+  { value: "arrow_left", label: "Inclui o anterior" },
+  { value: "money", label: "Franquia" },
+  { value: "chart_bar", label: "Relatórios" },
+  { value: "clock", label: "Prazo" },
+  { value: "ban", label: "Sem taxa" },
+  { value: "wrench", label: "Ferramentas" },
 ] as const);
 export type ProductIcon = (typeof productIcons.options)[number]["value"];
+
+/** Em qual aba da seção de planos do site o produto aparece. */
+export const siteSections = defineOptions([
+  { value: "monthly", label: "Planos Mensais" },
+  { value: "oneTime", label: "Planos Únicos" },
+] as const);
+export type SiteSection = (typeof siteSections.options)[number]["value"];
+
+/** Tipo de desconto da promoção. */
+export const promotionKinds = defineOptions([
+  { value: "percent", label: "Desconto em %" },
+  { value: "fixed", label: "Preço promocional" },
+] as const);
+export type PromotionKind = (typeof promotionKinds.options)[number]["value"];
 
 /** Motivos de cancelamento de contrato. */
 export const cancelReasons = defineOptions([

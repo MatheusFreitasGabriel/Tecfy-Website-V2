@@ -2,24 +2,53 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useMemo, useState, useTransition } from "react";
-import { FaArrowLeft, FaArrowUpRightFromSquare, FaBan, FaCheck, FaClockRotateLeft, FaEye, FaEyeSlash, FaFileContract, FaPen, FaStar } from "react-icons/fa6";
-import { productBillings } from "@/lib/admin/crm/options";
-import type { ContractRow, ProductDetail } from "@/lib/admin/crm/types";
+import { useMemo, useRef, useState, useTransition } from "react";
+import { FaArrowLeft, FaArrowUpRightFromSquare, FaBan, FaCheck, FaClockRotateLeft, FaClone, FaEye, FaEyeSlash, FaFileContract, FaPen, FaStar, FaTag } from "react-icons/fa6";
+import PlanCard from "@/app/components/public/home/plans/PlanCard";
+import { useClock } from "@/app/components/public/home/plans/useClock";
+import { productBillings, siteSections } from "@/lib/admin/crm/options";
+import type { ContractRow, ProductDetail, PromotionRow } from "@/lib/admin/crm/types";
+import { shortDate, toSitePlan, type SitePlan } from "@/lib/site/plans";
+import ConfirmDialog from "../form/ConfirmDialog";
+import PriceChangeModal from "./PriceChangeModal";
+import ProductAnalytics from "./ProductAnalytics";
+import PromotionModal from "./PromotionModal";
+import PromotionsPanel from "./PromotionsPanel";
 import KpiCard from "../dashboard/KpiCard";
 import Button from "../form/Button";
 import { callApi } from "../deal-detail/dealApi";
 import { formatDate, formatDateTime } from "../leads/leadVisuals";
 import CancelContractModal from "./CancelContractModal";
 import ProductFormModal from "./ProductFormModal";
-import { BillingBadge, ProductIconBox, brl, colorVar, integer, money, monthLabel, percent, priceParts } from "./productVisuals";
+import { BillingBadge, ProductIconBox, PromoChip, SiteChip, brl, colorVar, integer, livePrice, money, monthLabel, percent, priceParts, promoState } from "./productVisuals";
 
 interface ProductDetailViewProps {
   basePath: string;
   product: ProductDetail;
+  /** Card publicado no site (null = não está no site / nunca publicado). */
+  publishedPlan: SitePlan | null;
+  renderedAt: number;
+  initialTab?: string | null;
 }
 
-type Tab = "contratos" | "detalhes" | "historico";
+type Tab = "visao" | "contratos" | "promocoes" | "detalhes" | "historico" | "previa";
+const TABS: Tab[] = ["visao", "contratos", "promocoes", "detalhes", "historico", "previa"];
+type HistoryFilter = "todos" | "price" | "promotion" | "site" | "contract" | "updated";
+const HISTORY_FILTERS: { id: HistoryFilter; label: string; match: (type: string) => boolean }[] = [
+  { id: "todos", label: "Tudo", match: () => true },
+  { id: "price", label: "Preço", match: (t) => t === "price" || t === "price_change" },
+  { id: "promotion", label: "Promoções", match: (t) => t === "promotion" },
+  { id: "site", label: "Site", match: (t) => t === "site" },
+  { id: "contract", label: "Contratos", match: (t) => t.startsWith("contract") },
+  { id: "updated", label: "Cadastro", match: (t) => ["created", "updated", "status"].includes(t) },
+];
+const HISTORY_DOT: Record<string, string> = {
+  price: "bg-admin-stage-amber",
+  price_change: "bg-admin-stage-amber",
+  promotion: "bg-admin-stage-orange",
+  site: "bg-admin-stage-blue",
+  contract_cancelled: "bg-admin-danger",
+};
 type ContractFilter = "ativos" | "cancelados" | "todos";
 
 const monthNow = () => new Intl.DateTimeFormat("en-CA", { timeZone: "America/Sao_Paulo", year: "numeric", month: "2-digit" }).format(new Date());
@@ -38,10 +67,16 @@ function TermCell({ contract }: { contract: ContractRow }) {
 }
 
 /** Página do produto: números, contratos (com cancelamento), detalhes e histórico. */
-export default function ProductDetailView({ basePath, product: p }: ProductDetailViewProps) {
+export default function ProductDetailView({ basePath, product: p, publishedPlan, renderedAt, initialTab }: ProductDetailViewProps) {
   const router = useRouter();
+  const now = useClock(renderedAt);
   const [refreshing, startRefresh] = useTransition();
-  const [tab, setTab] = useState<Tab>("contratos");
+  const [tab, setTab] = useState<Tab>(TABS.includes(initialTab as Tab) ? (initialTab as Tab) : "visao");
+  const [historyFilter, setHistoryFilter] = useState<HistoryFilter>("todos");
+  const [promoting, setPromoting] = useState(false);
+  const [repricing, setRepricing] = useState(false);
+  const [ending, setEnding] = useState<PromotionRow | null>(null);
+  const duplicateKey = useRef<string | null>(null);
   const [filter, setFilter] = useState<ContractFilter>("ativos");
   const [editing, setEditing] = useState(false);
   const [cancelling, setCancelling] = useState<ContractRow | null>(null);
@@ -49,6 +84,11 @@ export default function ProductDetailView({ basePath, product: p }: ProductDetai
   const [notice, setNotice] = useState<{ tone: "success" | "error"; text: string } | null>(null);
 
   const price = priceParts(p);
+  const live = livePrice(p, now);
+  const promo = promoState(p, now);
+  const suffix = p.billing === "mensal" ? "/mês" : "";
+  const draftPlan = toSitePlan(p);
+  const history = p.history.filter((h) => HISTORY_FILTERS.find((f) => f.id === historyFilter)!.match(h.type));
   const ticket = p.stats.active_contracts ? p.stats.mrr / p.stats.active_contracts : 0;
   const churn = p.stats.total_contracts ? p.stats.cancelled / p.stats.total_contracts : 0;
   const contracts = useMemo(
@@ -76,10 +116,37 @@ export default function ProductDetailView({ basePath, product: p }: ProductDetai
     }
   };
 
+  const act = async (url: string, method: "POST" | "PATCH", body: Record<string, unknown>, success: string, after?: (data: Record<string, unknown>) => void) => {
+    setBusy(true);
+    setNotice(null);
+    try {
+      const { ok, status, data } = await callApi(url, method, body);
+      if (ok) {
+        if (after) after(data);
+        else refresh(success);
+      } else setNotice({ tone: "error", text: status === 401 ? "Sua sessão expirou. Entre de novo no painel." : "Não foi possível concluir. Tente de novo." });
+    } catch {
+      setNotice({ tone: "error", text: "Sem conexão. Tente de novo." });
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const duplicate = () => {
+    duplicateKey.current ??= crypto.randomUUID();
+    void act(`${basePath}/api/crm/products`, "POST", { request_id: duplicateKey.current, duplicate_of: p.id }, "", (data) => {
+      duplicateKey.current = null;
+      router.push(`${basePath}/produtos/${String(data.id)}`);
+    });
+  };
+
   const tabs: { id: Tab; label: string; count?: number }[] = [
+    { id: "visao", label: "Visão geral" },
     { id: "contratos", label: "Contratos", count: p.contracts.length },
+    { id: "promocoes", label: "Promoções", count: p.promotions.length },
     { id: "detalhes", label: "Detalhes" },
     { id: "historico", label: "Histórico", count: p.history.length },
+    { id: "previa", label: "No site" },
   ];
 
   return (
@@ -106,18 +173,40 @@ export default function ProductDetailView({ basePath, product: p }: ProductDetai
                 <span className={`inline-flex h-6 items-center rounded-md px-2 text-[11px] font-semibold uppercase tracking-wide ${p.active ? "bg-admin-qual-sure text-admin-qual-sure-text" : "bg-admin-deal-paused text-admin-deal-paused-text"}`}>
                   {p.active ? "Ativo" : "Inativo"}
                 </span>
+                <SiteChip visible={p.site_visible} active={p.active} />
+                {promo && <PromoChip promo={promo.promo} status={promo.status} />}
               </div>
             </div>
           </div>
           <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:gap-8">
             <div className="sm:text-right">
+              {live.original !== null && (
+                <p className="text-sm font-medium text-admin-text-hint line-through">
+                  {money(live.original)}
+                  {suffix}
+                </p>
+              )}
               <p className="flex items-baseline gap-1.5 sm:justify-end">
-                <span className="text-[28px] font-semibold leading-9 text-text-primary">{price.main}</span>
+                <span className="text-[28px] font-semibold leading-9 text-text-primary">{live.price !== null ? money(live.price) : price.main}</span>
                 {price.suffix && <span className="text-sm font-medium text-admin-text-description">{price.suffix}</span>}
               </p>
               {price.extra && <p className="text-xs font-medium text-admin-text-hint">{price.extra}</p>}
+              {p.price_change && (
+                <p className="text-xs font-semibold text-admin-accent">
+                  {money(p.price_change.new_price)}
+                  {suffix} a partir de {shortDate(p.price_change.effective_date)}
+                </p>
+              )}
             </div>
-            <div className="flex gap-3">
+            <div className="flex flex-wrap gap-3">
+              {p.billing !== "sob_consulta" && !promo && (
+                <Button variant="secondary" icon={FaTag} onClick={() => setPromoting(true)} disabled={busy}>
+                  Promoção
+                </Button>
+              )}
+              <Button variant="secondary" icon={FaClone} onClick={duplicate} disabled={busy}>
+                Duplicar
+              </Button>
               <Button variant="secondary" icon={p.active ? FaEyeSlash : FaEye} onClick={() => void toggleActive()} disabled={busy}>
                 {p.active ? "Desativar" : "Ativar"}
               </Button>
@@ -173,6 +262,56 @@ export default function ProductDetailView({ basePath, product: p }: ProductDetai
             </button>
           ))}
         </div>
+
+        {tab === "visao" && (
+          <div className="p-5">
+            <ProductAnalytics product={p} now={now} />
+          </div>
+        )}
+
+        {tab === "promocoes" && (
+          <PromotionsPanel
+            product={p}
+            now={now}
+            busy={busy}
+            onLaunch={() => setPromoting(true)}
+            onEnd={setEnding}
+            onPriceChange={() => setRepricing(true)}
+            onCancelPriceChange={() => void act(`${basePath}/api/crm/products/${p.id}`, "PATCH", { price_change: null }, "Reajuste cancelado.")}
+          />
+        )}
+
+        {tab === "previa" && (
+          <div className="flex flex-col gap-5 p-6">
+            <p className="text-sm font-medium text-admin-text-description">
+              {!p.site_visible
+                ? "Este produto não está marcado para aparecer no site. Ative \"Mostrar na seção de planos do site\" em Editar."
+                : !p.active
+                  ? "Produto inativo: não aparece no site mesmo marcado."
+                  : `Aparece na aba \"${siteSections.label(p.site_section)}\" do site.`}{" "}
+              Mudanças no cadastro só vão pro ar com &quot;Publicar no site&quot; (tela Produtos); promoções e reajustes vão na hora.
+            </p>
+            <div className="grid gap-6 lg:grid-cols-2">
+              {[
+                { title: "Como vai ficar (cadastro atual)", plan: p.site_visible && p.active ? draftPlan : null },
+                { title: "No ar agora", plan: publishedPlan },
+              ].map(({ title, plan }) => (
+                <div key={title} className="flex flex-col gap-2">
+                  <p className="text-xs font-semibold uppercase tracking-wide text-admin-text-hint">{title}</p>
+                  <div className="flex min-h-[200px] items-stretch justify-center rounded-2xl bg-background p-4 outline outline-1 -outline-offset-1 outline-admin-card-border">
+                    {plan ? (
+                      <div className="w-full max-w-[360px]">
+                        <PlanCard plan={plan} now={now} preview />
+                      </div>
+                    ) : (
+                      <p className="self-center text-sm font-medium text-text-secondary">Fora do site.</p>
+                    )}
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
 
         {tab === "contratos" && (
           <div className="flex flex-col">
@@ -321,17 +460,33 @@ export default function ProductDetailView({ basePath, product: p }: ProductDetai
         )}
 
         {tab === "historico" && (
-          <div className="p-6">
-            {p.history.length === 0 ? (
+          <div className="flex flex-col gap-5 p-6">
+            <div className="flex flex-wrap gap-2">
+              {HISTORY_FILTERS.map((f) => {
+                const count = p.history.filter((h) => f.match(h.type)).length;
+                return (
+                  <button
+                    key={f.id}
+                    type="button"
+                    aria-pressed={historyFilter === f.id}
+                    onClick={() => setHistoryFilter(f.id)}
+                    className={`h-9 rounded-lg px-3.5 text-[13px] font-semibold transition-colors ${historyFilter === f.id ? "bg-admin-tip text-admin-tip-title" : "bg-admin-badge text-admin-text-description hover:text-text-primary"}`}
+                  >
+                    {f.label} ({count})
+                  </button>
+                );
+              })}
+            </div>
+            {history.length === 0 ? (
               <p className="flex items-center gap-2 text-sm font-medium text-admin-text-description">
-                <FaClockRotateLeft aria-hidden className="h-3.5 w-3.5" /> Nenhuma alteração registrada desde que a tela de produtos foi criada.
+                <FaClockRotateLeft aria-hidden className="h-3.5 w-3.5" /> {p.history.length ? "Nada com esse filtro." : "Nenhuma alteração registrada desde que a tela de produtos foi criada."}
               </p>
             ) : (
               <ol className="flex flex-col">
-                {p.history.map((h, i) => (
+                {history.map((h, i) => (
                   <li key={h.id} className="relative flex gap-4 pb-6 last:pb-0">
-                    {i < p.history.length - 1 && <span aria-hidden className="absolute left-[5px] top-4 h-full w-px bg-admin-divider" />}
-                    <span aria-hidden className="mt-1.5 h-[11px] w-[11px] shrink-0 rounded-full bg-admin-accent" />
+                    {i < history.length - 1 && <span aria-hidden className="absolute left-[5px] top-4 h-full w-px bg-admin-divider" />}
+                    <span aria-hidden className={`mt-1.5 h-[11px] w-[11px] shrink-0 rounded-full ${HISTORY_DOT[h.type] ?? "bg-admin-accent"}`} />
                     <div className="min-w-0">
                       <p className="text-sm font-semibold text-text-primary">{h.title}</p>
                       {h.description && <p className="mt-0.5 whitespace-pre-line text-[13px] font-medium leading-5 text-admin-text-description">{h.description}</p>}
@@ -351,12 +506,58 @@ export default function ProductDetailView({ basePath, product: p }: ProductDetai
       {editing && (
         <ProductFormModal
           basePath={basePath}
+          renderedAt={renderedAt}
           product={p}
           onClose={() => setEditing(false)}
           onSaved={() => {
             setEditing(false);
-            refresh("Produto atualizado.");
+            refresh(p.site_visible ? "Produto atualizado. Publique na tela Produtos para a mudança ir pro site." : "Produto atualizado.");
           }}
+        />
+      )}
+      {promoting && (
+        <PromotionModal
+          basePath={basePath}
+          product={p}
+          now={now}
+          onClose={() => setPromoting(false)}
+          onDone={(scheduled) => {
+            setPromoting(false);
+            setTab("promocoes");
+            refresh(scheduled ? "Promoção agendada." : "Promoção no ar! O site já mostra o preço promocional.");
+          }}
+        />
+      )}
+      {repricing && (
+        <PriceChangeModal
+          basePath={basePath}
+          product={p}
+          now={now}
+          onClose={() => setRepricing(false)}
+          onDone={() => {
+            setRepricing(false);
+            refresh("Reajuste agendado.");
+          }}
+        />
+      )}
+      {ending && (
+        <ConfirmDialog
+          title={promo?.status === "scheduled" ? "Cancelar promoção?" : "Encerrar promoção agora?"}
+          tone="danger"
+          confirmLabel={promo?.status === "scheduled" ? "Cancelar promoção" : "Encerrar"}
+          busy={busy}
+          onCancel={() => setEnding(null)}
+          onConfirm={() =>
+            void act(`${basePath}/api/crm/products/${p.id}/promotions/${ending.id}`, "PATCH", { action: "end" }, "", () => {
+              setEnding(null);
+              refresh("Promoção encerrada. O site voltou ao preço de tabela.");
+            })
+          }
+          message={
+            <>
+              <strong className="text-text-primary">{ending.name}</strong> sai do site na hora. As vendas feitas durante ela continuam registradas.
+            </>
+          }
         />
       )}
       {cancelling && (

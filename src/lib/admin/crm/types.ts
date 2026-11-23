@@ -28,7 +28,9 @@ import type {
   LeadStatus,
   ProductBilling,
   ProductIcon,
+  SiteSection,
 } from "./options";
+import type { PriceChange, PromoInfo, SitePlan } from "@/lib/site/plans";
 
 export const PRODUCTS_COLLECTION = "products";
 export const CONTRACTS_COLLECTION = "contracts";
@@ -66,6 +68,17 @@ export interface ProductData {
   icon: ProductIcon;
   highlight: boolean;
   active: boolean;
+  /** Ícone de cada item incluso (mesma ordem de `features`). */
+  feature_icons: ProductIcon[];
+  /** Aparece na seção de planos do site (depois de "Publicar no site"). */
+  site_visible: boolean;
+  site_section: SiteSection;
+  /** Texto no lugar do preço no site quando não há preço ("SOB CONSULTA"). */
+  site_price_label: string | null;
+  /** Texto do botão no site (padrão "Assinar {nome}"). */
+  site_cta: string | null;
+  /** Meta de faturamento mensal do produto (reais). */
+  monthly_goal: number | null;
 }
 
 export interface Product extends ProductData {
@@ -73,6 +86,20 @@ export interface Product extends ProductData {
   /** Texto antigo ("SOB CONSULTA") dos produtos criados antes da tela. */
   price_label: string | null;
   sort: number;
+  /** Promoção atual ou agendada (a mais recente; pode já ter acabado — ver `promoStatus`). */
+  promo: PromoInfo | null;
+  /** Reajuste de preço agendado. */
+  price_change: (PriceChange & { created_by_name: string | null }) | null;
+}
+
+/** Registro de uma promoção (`products/{id}/promotions`). */
+export interface PromotionRow extends PromoInfo {
+  /** Preço de tabela quando foi lançada (reais). */
+  list_price: number;
+  /** Encerrada antes do fim previsto (ISO). */
+  ended_early_at: string | null;
+  created_by_name: string | null;
+  created_at: string | null;
 }
 
 export type ContractStatus = "active" | "cancelled";
@@ -135,19 +162,56 @@ export interface ContractRow {
   min_term_months: number;
   /** Último mês da fidelidade ("AAAA-MM"); null = sem fidelidade. */
   term_end: string | null;
+  /** Vendido durante esta promoção. */
+  promotion_id: string | null;
+  /** Preço de tabela no momento da venda (reais), quando registrado. */
+  list_price: number | null;
 }
 
 export interface ProductHistoryRow {
   id: string;
+  /** created | updated | status | contract_cancelled | promotion | price_change | site … */
+  type: string;
   title: string;
   description: string | null;
   author_name: string | null;
   created_at: string | null;
 }
 
+/** Leads do site que pediram este plano (`interest_plan` = nome do produto). */
+export interface ProductLeadStats {
+  total: number;
+  /** Viraram negociação. */
+  converted: number;
+  /** Leads por mês ("AAAA-MM" → quantidade), últimos 12 meses. */
+  by_month: Record<string, number>;
+}
+
 export interface ProductDetail extends ProductRow {
   contracts: ContractRow[];
   history: ProductHistoryRow[];
+  promotions: PromotionRow[];
+  leads: ProductLeadStats;
+}
+
+/** Uma publicação da seção de planos do site. */
+export interface SitePublicationRow {
+  id: string;
+  published_at: string | null;
+  published_by_name: string | null;
+  /** "Publicação" ou "Restauração da versão de dd/mm". */
+  title: string;
+  summary: string[];
+  plan_count: number;
+}
+
+/** Estado do site para a tela Produtos. */
+export interface SiteState {
+  /** null = nunca publicado (o site mostra os planos fixos do código). */
+  published: SitePlan[] | null;
+  published_at: string | null;
+  published_by_name: string | null;
+  publications: SitePublicationRow[];
 }
 
 // ── Dados gravados (sem id, timestamps e autoria — esses o servidor adiciona) ──
@@ -589,4 +653,7 @@ export interface ProductOption {
   one_time_price: number | null;
   setup_fee: number | null;
   price_label: string | null;
+  /** Para sugerir o preço vigente (promoção / reajuste) ao registrar a venda. */
+  promo: PromoInfo | null;
+  price_change: PriceChange | null;
 }

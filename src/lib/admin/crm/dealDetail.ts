@@ -10,6 +10,7 @@ import {
   productBillings,
 } from "./options";
 import { toProduct } from "./products";
+import { basePrice, priceAt } from "@/lib/site/plans";
 import {
   BOARDS_COLLECTION,
   COMPANIES_COLLECTION,
@@ -199,6 +200,8 @@ export async function listProductOptions(): Promise<ProductOption[]> {
       one_time_price: p.one_time_price,
       setup_fee: p.setup_fee,
       price_label: p.price_label,
+      promo: p.promo,
+      price_change: p.price_change ? { new_price: p.price_change.new_price, effective_date: p.price_change.effective_date } : null,
     }));
 }
 
@@ -320,7 +323,11 @@ export async function markDealWon(id: string, input: WonInput, actor: Actor): Pr
     const productName = catalog ? catalog.name : (input.product_name ?? "Venda");
     const billing = catalog ? catalog.billing : input.kind === "unico" ? "unico" : "mensal";
     const signedAt = Timestamp.fromDate(brazilDateTime(input.signed_date, "12:00"));
+    // Venda durante promoção: guarda qual e o preço de tabela (análise de promoções na tela Produtos).
+    const pricing = catalog ? priceAt({ price: basePrice(catalog), promo: catalog.promo, price_change: catalog.price_change }, signedAt.toMillis()) : null;
     tx.set(contractRef, {
+      promotion_id: pricing?.promo?.id ?? null,
+      list_price: pricing ? (pricing.original ?? pricing.price) : null,
       lead_id: str(snap.get("lead_id")) ?? "",
       deal_id: id,
       company_id: companyId,

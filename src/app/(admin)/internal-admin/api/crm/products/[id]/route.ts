@@ -1,7 +1,8 @@
-import { CRM_TAGS, invalidateCrm, productTag } from "@/lib/admin/crm/cache";
+import { CRM_TAGS, invalidateCrm, invalidateSite, productTag } from "@/lib/admin/crm/cache";
 import { guardedWrite, validId } from "@/lib/admin/crm/dealRoutes";
-import { PRODUCT_MAX_BYTES, validateProductForm, type ProductForm } from "@/lib/admin/crm/productValidation";
-import { ProductInUseError, ProductNotFoundError, deleteProduct, moveProduct, setProductActive, updateProduct } from "@/lib/admin/crm/products";
+import { PRODUCT_MAX_BYTES, validatePriceChange, validateProductForm, type ProductForm } from "@/lib/admin/crm/productValidation";
+import { ProductInUseError, ProductNotFoundError, cancelPriceChange, deleteProduct, getProduct, moveProduct, schedulePriceChange, setProductActive, updateProduct } from "@/lib/admin/crm/products";
+import { brazilDayKey } from "@/lib/site/plans";
 import { crmResponses } from "@/lib/admin/crm/routeHelpers";
 
 export const runtime = "nodejs";
@@ -20,7 +21,8 @@ function errorResponse(error: unknown, label: string): Response {
  * Edita o produto. Um destes corpos:
  *  - `{ product: ProductForm }` → cadastro completo (histórico com o que mudou);
  *  - `{ active: boolean }`      → ativar/desativar;
- *  - `{ move: "up" | "down" }`  → posição no catálogo.
+ *  - `{ move: "up" | "down" }`  → posição no catálogo;
+ *  - `{ price_change: { new_price, effective_date } | null }` → agenda / cancela reajuste (vai direto pro site).
  * Resposta: 200 { changed } · 400 { fields } · 404.
  */
 export async function PATCH(request: Request, { params }: Context) {
@@ -33,6 +35,20 @@ export async function PATCH(request: Request, { params }: Context) {
     if (body.move === "up" || body.move === "down") {
       await moveProduct(id, body.move);
       invalidateCrm(CRM_TAGS.products);
+      return Response.json({ changed: true });
+    }
+    if ("price_change" in body) {
+      if (body.price_change === null) {
+        const result = await cancelPriceChange(id, actor);
+        if (result.changed) invalidateSite(CRM_TAGS.products, productTag(id));
+        return Response.json(result);
+      }
+      const snap = await getProduct(id);
+      if (!snap) return crmResponses.notFound();
+      const parsed = validatePriceChange((body.price_change ?? {}) as Record<string, unknown>, snap, brazilDayKey(Date.now()));
+      if (!parsed.ok) return Response.json({ error: "invalid_input", fields: parsed.errors }, { status: 400 });
+      await schedulePriceChange(id, parsed.value, actor);
+      invalidateSite(CRM_TAGS.products, productTag(id));
       return Response.json({ changed: true });
     }
     if (typeof body.active === "boolean") {

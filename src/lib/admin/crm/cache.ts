@@ -1,5 +1,6 @@
 import "server-only";
-import { revalidateTag, unstable_cache } from "next/cache";
+import { revalidatePath, revalidateTag, unstable_cache } from "next/cache";
+import { SITE_PLANS_TAG } from "@/lib/site/plans";
 import { listAdminUsers } from "./admins";
 import { LEADS_LIST_LIMIT, listCompanyOptions, listContactOptions, listLeadsPage, type LeadsCursor } from "./leads";
 import { COMPANIES_LIST_LIMIT, activeClientIds, getCompanyDetail, listCompaniesPage } from "./companies";
@@ -32,6 +33,8 @@ export const CRM_TAGS = {
   imports: "crm-imports",
   /** Contratos (venda, reabrir, cancelar): números da tela Produtos. */
   contracts: "crm-contracts",
+  /** O que está publicado no site (retrato + publicações), visto pelo painel. */
+  site: "crm-site",
 } as const;
 export type CrmTag = (typeof CRM_TAGS)[keyof typeof CRM_TAGS];
 
@@ -200,7 +203,7 @@ export async function getCachedDeals(): Promise<{ deals: DealRow[]; truncated: b
 }
 
 /** Produtos ativos para "Marcar como venda" (só leitura; a tela Produtos é do usuário). 5 min de cache. */
-export const getCachedProductOptions = unstable_cache(async () => (await import("./dealDetail")).listProductOptions(), ["crm-products-v2"], {
+export const getCachedProductOptions = unstable_cache(async () => (await import("./dealDetail")).listProductOptions(), ["crm-products-v3"], {
   tags: [CRM_TAGS.products],
   revalidate: 300,
 });
@@ -209,17 +212,32 @@ export const getCachedProductOptions = unstable_cache(async () => (await import(
 export const productTag = (id: string | null | undefined) => (id ? `crm-product-${id}` : null);
 
 /** Catálogo com os números de cada produto (dependem dos contratos). */
-export const getCachedProducts = unstable_cache(async () => (await import("./products")).listProducts(), ["crm-products-list-v1"], {
+export const getCachedProducts = unstable_cache(async () => (await import("./products")).listProducts(), ["crm-products-list-v2"], {
   tags: [CRM_TAGS.products, CRM_TAGS.contracts],
   revalidate: 3600,
 });
 
 /** Página do produto: contratos com nome da empresa → também depende de empresas. */
 export function getCachedProductDetail(id: string) {
-  return unstable_cache(async () => (await import("./products")).getProductDetail(id), ["crm-product-detail-v1", id], {
-    tags: [productTag(id)!, CRM_TAGS.products, CRM_TAGS.contracts, CRM_TAGS.companies],
+  return unstable_cache(async () => (await import("./products")).getProductDetail(id), ["crm-product-detail-v2", id], {
+    tags: [productTag(id)!, CRM_TAGS.products, CRM_TAGS.contracts, CRM_TAGS.companies, CRM_TAGS.leads],
     revalidate: 3600,
   })();
+}
+
+/** Retrato publicado do site + publicações (tela Produtos). */
+export const getCachedSiteState = unstable_cache(async () => (await import("./siteCatalog")).getSiteState(), ["crm-site-state-v1"], {
+  tags: [CRM_TAGS.site],
+  revalidate: 3600,
+});
+
+/**
+ * Depois de mudar o que está no ar (publicar, restaurar, promoção, reajuste): painel + landing.
+ * A landing lê `site_content/plans` com a tag `site-plans` (ver `src/lib/site/getSitePlans.ts`).
+ */
+export function invalidateSite(...extra: (CrmTag | string | null | undefined)[]): void {
+  invalidateCrm(CRM_TAGS.site, SITE_PLANS_TAG, ...extra);
+  revalidatePath("/");
 }
 
 // ── Tarefas ─────────────────────────────────────────────────────────────────

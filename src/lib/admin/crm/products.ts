@@ -5,13 +5,16 @@ import { listContracts, toContract } from "./contracts";
 import { brazilDateTime } from "./dealValidation";
 import { historyData } from "./history";
 import type { Actor } from "./leads";
-import { cancelReasons, productBillings, productIcons, stageColors } from "./options";
-import { computeStats, termEndMonth } from "./revenue";
+import { basePrice, brazilDayKey, parsePriceChange, parsePromo } from "@/lib/site/plans";
+import { cancelReasons, productBillings, productIcons, siteSections, stageColors } from "./options";
+import { computeStats, currentMonthKey, termEndMonth } from "./revenue";
+import { patchPublishedPlan, siteDocRef } from "./siteSnapshot";
 import {
   COMPANIES_COLLECTION,
   CONTRACTS_COLLECTION,
   DEAL_HISTORY_SUBCOLLECTION,
   DEALS_COLLECTION,
+  LEADS_COLLECTION,
   PRODUCTS_COLLECTION,
   type Contract,
   type ContractRow,
@@ -19,8 +22,10 @@ import {
   type ProductData,
   type ProductDetail,
   type ProductHistoryRow,
+  type ProductLeadStats,
   type ProductRow,
   type ProductStats,
+  type PromotionRow,
 } from "./types";
 
 /**
@@ -31,6 +36,7 @@ import {
  */
 
 export const PRODUCT_HISTORY_SUBCOLLECTION = "history";
+export const PRODUCT_PROMOTIONS_SUBCOLLECTION = "promotions";
 
 export class ProductNotFoundError extends Error {}
 /** Produto com contratos não pode ser excluído (só desativado). */
@@ -50,6 +56,9 @@ export function toProduct(doc: DocumentSnapshot): Product {
   const d = doc.data() ?? {};
   const monthly = numOrNull(d.monthly_price);
   const billing = productBillings.is(d.billing) ? d.billing : monthly !== null ? "mensal" : "sob_consulta";
+  const features: string[] = Array.isArray(d.features) ? d.features.filter((f: unknown): f is string => typeof f === "string") : [];
+  const icons: unknown[] = Array.isArray(d.feature_icons) ? d.feature_icons : [];
+  const change = parsePriceChange(d.price_change);
   return {
     id: doc.id,
     name: str(d.name) ?? "Produto",
@@ -59,13 +68,45 @@ export function toProduct(doc: DocumentSnapshot): Product {
     one_time_price: billing === "unico" ? numOrNull(d.one_time_price) : null,
     setup_fee: billing !== "unico" ? numOrNull(d.setup_fee) : null,
     min_term_months: billing === "unico" ? null : (numOrNull(d.min_term_months) ?? 8),
-    features: Array.isArray(d.features) ? d.features.filter((f: unknown): f is string => typeof f === "string") : [],
+    features,
+    feature_icons: features.map((_, i) => (productIcons.is(icons[i]) ? icons[i] : "check")),
     color: stageColors.is(d.color) ? d.color : "violet",
     icon: productIcons.is(d.icon) ? d.icon : "rocket",
     highlight: d.highlight === true,
     active: d.active !== false,
+    site_visible: d.site_visible === true,
+    site_section: siteSections.is(d.site_section) ? d.site_section : billing === "unico" ? "oneTime" : "monthly",
+    site_price_label: str(d.site_price_label),
+    site_cta: str(d.site_cta),
+    monthly_goal: numOrNull(d.monthly_goal),
     price_label: str(d.price_label),
     sort: typeof d.sort === "number" ? d.sort : 0,
+    promo: parsePromo(d.promo),
+    price_change: change ? { ...change, created_by_name: str(d.price_change?.created_by_name) } : null,
+  };
+}
+
+/** Campos do cadastro (o que o formulário grava) a partir do produto. */
+export function productDataOf(p: Product): ProductData {
+  return {
+    name: p.name,
+    description: p.description,
+    billing: p.billing,
+    monthly_price: p.monthly_price,
+    one_time_price: p.one_time_price,
+    setup_fee: p.setup_fee,
+    min_term_months: p.min_term_months,
+    features: p.features,
+    color: p.color,
+    icon: p.icon,
+    highlight: p.highlight,
+    active: p.active,
+    feature_icons: p.feature_icons,
+    site_visible: p.site_visible,
+    site_section: p.site_section,
+    site_price_label: p.site_price_label,
+    site_cta: p.site_cta,
+    monthly_goal: p.monthly_goal,
   };
 }
 
@@ -80,10 +121,62 @@ export async function listProducts(now = new Date()): Promise<{ products: Produc
     if (list) list.push(c);
     else byProduct.set(c.product_id, [c]);
   }
-  const products = snap.docs
-    .map((doc) => ({ ...toProduct(doc), stats: computeStats(byProduct.get(doc.id) ?? [], now), created_at: iso(doc.get("created_at")) }))
+  const products = (await applyDuePriceChanges(snap.docs.map(toProduct), now))
+    .map((p) => ({ ...p, stats: computeStats(byProduct.get(p.id) ?? [], now), created_at: iso(snap.docs.find((d) => d.id === p.id)?.get("created_at")) }))
     .sort(bySort);
   return { products, totals: computeStats(contracts, now) };
+}
+
+/** Um produto (leitura pontual) ou null. */
+export async function getProduct(id: string): Promise<Product | null> {
+  const snap = await getAdminDb().collection(PRODUCTS_COLLECTION).doc(id).get();
+  return snap.exists ? toProduct(snap) : null;
+}
+
+/** Só para o cálculo do site/rascunho (sem números): catálogo inteiro, reajustes vencidos aplicados. */
+export async function listCatalog(now = new Date()): Promise<Product[]> {
+  const snap = await getAdminDb().collection(PRODUCTS_COLLECTION).get();
+  return (await applyDuePriceChanges(snap.docs.map(toProduct), now)).sort(bySort);
+}
+
+/**
+ * Reajustes agendados cuja data chegou viram o preço de tabela (com histórico e retrato do site
+ * atualizado). Roda nas leituras do catálogo; a tela e o site já mostram o preço novo antes disso
+ * (calculam pela data), então isto só "consolida" o cadastro. Falha aqui não derruba a leitura.
+ */
+async function applyDuePriceChanges(products: Product[], now: Date): Promise<Product[]> {
+  const today = brazilDayKey(now.getTime());
+  const due = products.filter((p) => p.price_change && p.price_change.effective_date <= today && basePrice(p) !== null);
+  if (!due.length) return products;
+  const db = getAdminDb();
+  const applied = new Map<string, Product>();
+  await Promise.all(
+    due.map(async (p) => {
+      try {
+        const ref = db.collection(PRODUCTS_COLLECTION).doc(p.id);
+        const result = await db.runTransaction(async (tx) => {
+          const [snap, site] = await tx.getAll(ref, siteDocRef());
+          if (!snap.exists) return null;
+          const fresh = toProduct(snap);
+          const change = fresh.price_change;
+          if (!change || change.effective_date > today || basePrice(fresh) === null) return null;
+          const field = fresh.billing === "unico" ? "one_time_price" : "monthly_price";
+          const before = basePrice(fresh);
+          tx.update(ref, { [field]: change.new_price, price_change: null, updated_at: FieldValue.serverTimestamp() });
+          tx.create(
+            ref.collection(PRODUCT_HISTORY_SUBCOLLECTION).doc(),
+            historyData("price_change", "Reajuste aplicado", `Preço: ${money(before)} → ${money(change.new_price)} (agendado para ${dateBr(change.effective_date)})`, { uid: "system", name: "Sistema" }),
+          );
+          patchPublishedPlan(tx, site, p.id, { price: change.new_price, price_change: null });
+          return { ...fresh, [field]: change.new_price, price_change: null } as Product;
+        });
+        if (result) applied.set(p.id, result);
+      } catch (error) {
+        console.error("crm apply price change error", error instanceof Error ? error.message : "unknown");
+      }
+    }),
+  );
+  return products.map((p) => applied.get(p.id) ?? p);
 }
 
 function toContractRow(doc: DocumentSnapshot, companies: Map<string, string>, deals: Map<string, string>): ContractRow | null {
@@ -107,7 +200,47 @@ function toContractRow(doc: DocumentSnapshot, companies: Map<string, string>, de
     cancel_reason: str(doc.get("cancel_reason")),
     min_term_months: c.min_term_months,
     term_end: c.billing === "unico" ? null : termEndMonth(c.signed_at, c.min_term_months),
+    promotion_id: str(doc.get("promotion_id")),
+    list_price: numOrNull(doc.get("list_price")),
   };
+}
+
+function toPromotionRow(doc: DocumentSnapshot): PromotionRow | null {
+  const promo = parsePromo({ ...doc.data(), id: doc.id });
+  if (!promo) return null;
+  return {
+    ...promo,
+    list_price: numOrNull(doc.get("list_price")) ?? 0,
+    ended_early_at: str(doc.get("ended_early_at")),
+    created_by_name: str(doc.get("created_by_name")),
+    created_at: iso(doc.get("created_at")),
+  };
+}
+
+/** Leads do site que pediram o plano pelo nome (`interest_plan`), últimos 12 meses por mês. */
+async function leadStats(name: string, now: Date): Promise<ProductLeadStats> {
+  const db = getAdminDb();
+  const variants = [...new Set([name, name.toLowerCase(), name.toUpperCase()])];
+  const snaps = await Promise.all(variants.map((v) => db.collection(LEADS_COLLECTION).where("interest_plan", "==", v).select("deal_id", "converted_at", "created_at").get()));
+  const seen = new Set<string>();
+  const stats: ProductLeadStats = { total: 0, converted: 0, by_month: {} };
+  const oldest = new Date(now);
+  oldest.setMonth(oldest.getMonth() - 12);
+  for (const doc of snaps.flatMap((s) => s.docs)) {
+    if (seen.has(doc.id)) continue;
+    seen.add(doc.id);
+    stats.total += 1;
+    if (doc.get("deal_id") || doc.get("converted_at")) stats.converted += 1;
+    const created = doc.get("created_at");
+    if (created && typeof created.toDate === "function") {
+      const date: Date = created.toDate();
+      if (date >= oldest) {
+        const key = currentMonthKey(date);
+        stats.by_month[key] = (stats.by_month[key] ?? 0) + 1;
+      }
+    }
+  }
+  return stats;
 }
 
 /** Nomes por id (leituras diretas, em lotes). */
@@ -126,12 +259,15 @@ async function namesById(collection: string, field: string, ids: Set<string>): P
 export async function getProductDetail(id: string, now = new Date()): Promise<ProductDetail | null> {
   const db = getAdminDb();
   const ref = db.collection(PRODUCTS_COLLECTION).doc(id);
-  const [doc, contractsSnap, historySnap] = await Promise.all([
+  const [doc, contractsSnap, historySnap, promotionsSnap] = await Promise.all([
     ref.get(),
     db.collection(CONTRACTS_COLLECTION).where("product_id", "==", id).get(),
-    ref.collection(PRODUCT_HISTORY_SUBCOLLECTION).orderBy("created_at", "desc").limit(100).get(),
+    ref.collection(PRODUCT_HISTORY_SUBCOLLECTION).orderBy("created_at", "desc").limit(200).get(),
+    ref.collection(PRODUCT_PROMOTIONS_SUBCOLLECTION).orderBy("created_at", "desc").limit(50).get(),
   ]);
   if (!doc.exists) return null;
+  const [product] = await applyDuePriceChanges([toProduct(doc)], now);
+  const leads = await leadStats(product.name, now).catch(() => ({ total: 0, converted: 0, by_month: {} }));
 
   const companyIds = new Set(contractsSnap.docs.map((d) => str(d.get("company_id"))).filter((v): v is string => Boolean(v)));
   const dealIds = new Set(contractsSnap.docs.map((d) => str(d.get("deal_id"))).filter((v): v is string => Boolean(v)));
@@ -144,13 +280,15 @@ export async function getProductDetail(id: string, now = new Date()): Promise<Pr
   const stats = computeStats(contractsSnap.docs.map(toContract).filter((c): c is Contract => c !== null), now);
   const history: ProductHistoryRow[] = historySnap.docs.map((h) => ({
     id: h.id,
+    type: str(h.get("type")) ?? "updated",
     title: str(h.get("title")) ?? "",
     description: str(h.get("description")),
     author_name: str(h.get("author_name")),
     created_at: iso(h.get("created_at")),
   }));
+  const promotions = promotionsSnap.docs.map(toPromotionRow).filter((p): p is PromotionRow => p !== null);
 
-  return { ...toProduct(doc), stats, created_at: iso(doc.get("created_at")), contracts, history };
+  return { ...product, stats, created_at: iso(doc.get("created_at")), contracts, history, promotions, leads };
 }
 
 // ── Escrita ──────────────────────────────────────────────────────────────────
@@ -173,8 +311,18 @@ export function describeProductChanges(before: Product, after: ProductData): str
   push("Ícone", productIcons.label(before.icon), productIcons.label(after.icon));
   push("Destaque", before.highlight ? "sim" : "não", after.highlight ? "sim" : "não");
   push("Situação", before.active ? "Ativo" : "Inativo", after.active ? "Ativo" : "Inativo");
+  if (before.features.join("\n") === after.features.join("\n") && before.feature_icons.join() !== after.feature_icons.join()) changes.push("Ícones dos itens alterados");
+  push("No site", before.site_visible ? "sim" : "não", after.site_visible ? "sim" : "não");
+  push("Aba do site", siteSections.label(before.site_section), siteSections.label(after.site_section));
+  push("Texto do preço no site", before.site_price_label ?? "padrão", after.site_price_label ?? "padrão");
+  push("Botão no site", before.site_cta ?? "padrão", after.site_cta ?? "padrão");
+  push("Meta mensal", money(before.monthly_goal), money(after.monthly_goal));
   return changes;
 }
+
+/** Tipo do registro de histórico pela mudança: preço / site / cadastro. */
+const changeType = (changes: string[]) =>
+  changes.some((c) => /^(Preço mensal|Pagamento único|Implantação|Cobrança)/.test(c)) ? "price" : changes.every((c) => /site/i.test(c)) ? "site" : "updated";
 
 const authorship = (actor: Actor) => ({ updated_by_uid: actor.uid, updated_by_name: actor.name, updated_at: FieldValue.serverTimestamp() });
 
@@ -189,6 +337,8 @@ export async function createProduct(data: ProductData, actor: Actor, requestId: 
     tx.create(ref, {
       ...data,
       price_label: null,
+      promo: null,
+      price_change: null,
       sort,
       created_by_uid: actor.uid,
       created_by_name: actor.name,
@@ -210,7 +360,64 @@ export async function updateProduct(id: string, data: ProductData, actor: Actor)
     const changes = describeProductChanges(toProduct(snap), data);
     if (!changes.length) return { changed: false };
     tx.update(ref, { ...data, price_label: null, ...authorship(actor) });
-    tx.create(ref.collection(PRODUCT_HISTORY_SUBCOLLECTION).doc(), historyData("updated", "Produto alterado", changes.join(" · "), actor));
+    tx.create(ref.collection(PRODUCT_HISTORY_SUBCOLLECTION).doc(), historyData(changeType(changes), "Produto alterado", changes.join(" · "), actor));
+    return { changed: true };
+  });
+}
+
+/** Cópia do produto (desativada e fora do site), no fim do catálogo. Idempotente pelo `requestId`. */
+export async function duplicateProduct(sourceId: string, actor: Actor, requestId: string): Promise<{ id: string; created: boolean }> {
+  const db = getAdminDb();
+  const source = await db.collection(PRODUCTS_COLLECTION).doc(sourceId).get();
+  if (!source.exists) throw new ProductNotFoundError();
+  const original = toProduct(source);
+  const suffix = " (cópia)";
+  const data: ProductData = {
+    ...productDataOf(original),
+    name: original.name.slice(0, 60 - suffix.length) + suffix,
+    active: false,
+    highlight: false,
+    site_visible: false,
+  };
+  const result = await createProduct(data, actor, requestId);
+  if (result.created) {
+    await db
+      .collection(PRODUCTS_COLLECTION)
+      .doc(result.id)
+      .collection(PRODUCT_HISTORY_SUBCOLLECTION)
+      .add(historyData("created", "Criado como cópia", `Cópia de "${original.name}". Começa desativado e fora do site.`, actor));
+  }
+  return result;
+}
+
+/** Agenda um reajuste de preço (substitui o agendado). Vai direto para o retrato do site. */
+export async function schedulePriceChange(id: string, change: { new_price: number; effective_date: string }, actor: Actor): Promise<void> {
+  const db = getAdminDb();
+  const ref = db.collection(PRODUCTS_COLLECTION).doc(id);
+  await db.runTransaction(async (tx) => {
+    const [snap, site] = await tx.getAll(ref, siteDocRef());
+    if (!snap.exists) throw new ProductNotFoundError();
+    const product = toProduct(snap);
+    tx.update(ref, { price_change: { ...change, created_by_name: actor.name }, ...authorship(actor) });
+    tx.create(
+      ref.collection(PRODUCT_HISTORY_SUBCOLLECTION).doc(),
+      historyData("price_change", "Reajuste agendado", `Preço: ${money(basePrice(product))} → ${money(change.new_price)} a partir de ${dateBr(change.effective_date)}`, actor),
+    );
+    patchPublishedPlan(tx, site, id, { price_change: { new_price: change.new_price, effective_date: change.effective_date } });
+  });
+}
+
+export async function cancelPriceChange(id: string, actor: Actor): Promise<{ changed: boolean }> {
+  const db = getAdminDb();
+  const ref = db.collection(PRODUCTS_COLLECTION).doc(id);
+  return db.runTransaction(async (tx) => {
+    const [snap, site] = await tx.getAll(ref, siteDocRef());
+    if (!snap.exists) throw new ProductNotFoundError();
+    const change = toProduct(snap).price_change;
+    if (!change) return { changed: false };
+    tx.update(ref, { price_change: null, ...authorship(actor) });
+    tx.create(ref.collection(PRODUCT_HISTORY_SUBCOLLECTION).doc(), historyData("price_change", "Reajuste cancelado", `${money(change.new_price)} a partir de ${dateBr(change.effective_date)} não vai mais valer.`, actor));
+    patchPublishedPlan(tx, site, id, { price_change: null });
     return { changed: true };
   });
 }
@@ -253,9 +460,10 @@ export async function deleteProduct(id: string): Promise<void> {
   const [snap, used] = await Promise.all([ref.get(), db.collection(CONTRACTS_COLLECTION).where("product_id", "==", id).limit(1).get()]);
   if (!snap.exists) throw new ProductNotFoundError();
   if (!used.empty) throw new ProductInUseError();
-  const history = await ref.collection(PRODUCT_HISTORY_SUBCOLLECTION).limit(400).get();
+  const [history, promotions] = await Promise.all([ref.collection(PRODUCT_HISTORY_SUBCOLLECTION).limit(400).get(), ref.collection(PRODUCT_PROMOTIONS_SUBCOLLECTION).limit(80).get()]);
   const batch = db.batch();
   history.docs.forEach((h) => batch.delete(h.ref));
+  promotions.docs.forEach((h) => batch.delete(h.ref));
   batch.delete(ref);
   await batch.commit();
 }
