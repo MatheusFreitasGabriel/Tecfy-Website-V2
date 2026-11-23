@@ -225,7 +225,7 @@ export default function CreateLeadModal({ basePath, admins, currentUid, onClose,
                 onRemove={() => setCompany({ mode: "none" })}
               />
 
-              <div className="rounded-[10px] bg-admin-tip px-[18px] py-[13px]">
+              <div className="rounded-lg bg-admin-tip px-[18px] py-[13px]">
                 <p className="text-[13px] font-semibold leading-[19px] text-admin-tip-title">Um cadastro, tudo conectado</p>
                 <p className="mt-1.5 text-xs font-medium leading-[18px] text-admin-tip-text">
                   Os novos contatos e empresas serão criados nos módulos correspondentes ao salvar o lead.

@@ -20,3 +20,15 @@ export function patchPublishedPlan(tx: Transaction, site: DocumentSnapshot, prod
   tx.update(site.ref, { plans, updated_at: FieldValue.serverTimestamp() });
   return true;
 }
+
+/**
+ * Tira UM card do retrato publicado (produto excluído ou desativado sai do site na hora), dentro de
+ * uma transação que já leu `site`. Retorna se o card estava no ar.
+ */
+export function removePublishedPlan(tx: Transaction, site: DocumentSnapshot, productId: string): boolean {
+  if (!site.exists) return false;
+  const plans = parseSitePlans(site.get("plans"));
+  if (!plans || !plans.some((p) => p.id === productId)) return false;
+  tx.update(site.ref, { plans: plans.filter((p) => p.id !== productId), updated_at: FieldValue.serverTimestamp() });
+  return true;
+}

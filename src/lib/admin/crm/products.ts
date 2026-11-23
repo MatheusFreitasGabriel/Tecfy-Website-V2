@@ -8,7 +8,7 @@ import type { Actor } from "./leads";
 import { basePrice, brazilDayKey, parsePriceChange, parsePromo } from "@/lib/site/plans";
 import { cancelReasons, productBillings, productIcons, siteSections, stageColors } from "./options";
 import { computeStats, currentMonthKey, termEndMonth } from "./revenue";
-import { patchPublishedPlan, siteDocRef } from "./siteSnapshot";
+import { patchPublishedPlan, removePublishedPlan, siteDocRef } from "./siteSnapshot";
 import {
   COMPANIES_COLLECTION,
   CONTRACTS_COLLECTION,
@@ -422,19 +422,31 @@ export async function cancelPriceChange(id: string, actor: Actor): Promise<{ cha
   });
 }
 
-export async function setProductActive(id: string, active: boolean, actor: Actor): Promise<{ changed: boolean }> {
+/**
+ * Ativa/desativa. Desativar tira o card do site NA HORA (sem esperar "Publicar"); reativar não
+ * publica sozinho — volta ao site no próximo "Publicar no site".
+ */
+export async function setProductActive(id: string, active: boolean, actor: Actor): Promise<{ changed: boolean; leftSite: boolean }> {
   const db = getAdminDb();
   const ref = db.collection(PRODUCTS_COLLECTION).doc(id);
   return db.runTransaction(async (tx) => {
-    const snap = await tx.get(ref);
+    const [snap, site] = await tx.getAll(ref, siteDocRef());
     if (!snap.exists) throw new ProductNotFoundError();
-    if ((snap.get("active") !== false) === active) return { changed: false };
+    if ((snap.get("active") !== false) === active) return { changed: false, leftSite: false };
+    const leftSite = !active && removePublishedPlan(tx, site, id);
     tx.update(ref, { active, ...authorship(actor) });
     tx.create(
       ref.collection(PRODUCT_HISTORY_SUBCOLLECTION).doc(),
-      historyData("status", active ? "Produto ativado" : "Produto desativado", active ? "Volta a aparecer em \"Marcar como vendida\"." : "Some de \"Marcar como vendida\"; contratos existentes continuam.", actor),
+      historyData(
+        "status",
+        active ? "Produto ativado" : "Produto desativado",
+        active
+          ? "Volta a aparecer em \"Marcar como vendida\". Para voltar ao site, publique na tela Produtos."
+          : `Some de "Marcar como vendida"; contratos existentes continuam.${leftSite ? " Saiu do site na hora." : ""}`,
+        actor,
+      ),
     );
-    return { changed: true };
+    return { changed: true, leftSite };
   });
 }
 
@@ -453,19 +465,27 @@ export async function moveProduct(id: string, direction: "up" | "down"): Promise
   await batch.commit();
 }
 
-/** Exclui um produto que NUNCA foi vendido (cadastro errado). Com contratos → ProductInUseError. */
+/** Exclui um produto que NUNCA foi vendido (cadastro errado) e tira o card do site. Com contratos → ProductInUseError. */
 export async function deleteProduct(id: string): Promise<void> {
   const db = getAdminDb();
   const ref = db.collection(PRODUCTS_COLLECTION).doc(id);
   const [snap, used] = await Promise.all([ref.get(), db.collection(CONTRACTS_COLLECTION).where("product_id", "==", id).limit(1).get()]);
   if (!snap.exists) throw new ProductNotFoundError();
   if (!used.empty) throw new ProductInUseError();
+  // Produto + card do site na mesma transação: excluir tira do site na hora.
+  await db.runTransaction(async (tx) => {
+    const [fresh, site] = await tx.getAll(ref, siteDocRef());
+    if (!fresh.exists) return;
+    removePublishedPlan(tx, site, id);
+    tx.delete(ref);
+  });
   const [history, promotions] = await Promise.all([ref.collection(PRODUCT_HISTORY_SUBCOLLECTION).limit(400).get(), ref.collection(PRODUCT_PROMOTIONS_SUBCOLLECTION).limit(80).get()]);
-  const batch = db.batch();
-  history.docs.forEach((h) => batch.delete(h.ref));
-  promotions.docs.forEach((h) => batch.delete(h.ref));
-  batch.delete(ref);
-  await batch.commit();
+  if (!history.empty || !promotions.empty) {
+    const batch = db.batch();
+    history.docs.forEach((h) => batch.delete(h.ref));
+    promotions.docs.forEach((h) => batch.delete(h.ref));
+    await batch.commit();
+  }
 }
 
 // ── Contratos ────────────────────────────────────────────────────────────────

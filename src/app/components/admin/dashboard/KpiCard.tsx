@@ -7,16 +7,21 @@ interface KpiCardProps {
   illustration?: React.ReactNode;
 }
 
-/** Card de indicador do dashboard (rótulo cinza + número grande). */
+/**
+ * Indicador do painel na identidade do site: moldura de borda fina com o card preto dentro
+ * (como os cards de planos da landing), rótulo pequeno em caixa alta e número grande.
+ */
 export default function KpiCard({ label, value, hint, illustration }: KpiCardProps) {
   return (
-    <div className="flex min-h-[112px] min-w-0 items-center justify-between gap-6 rounded-xl bg-background-kpi p-6 outline outline-1 -outline-offset-1 outline-text-disabled">
-      <div className="flex min-w-0 flex-col gap-4">
-        <p className="truncate text-base font-medium leading-4 text-text-kpi-label">{label}</p>
-        <p className="truncate text-[32px] font-medium leading-8 text-text-primary">{value}</p>
-        {hint && <p className="text-xs leading-4 text-text-kpi-label">{hint}</p>}
+    <div className="group min-w-0 border border-border-primary p-1.5 transition-colors hover:border-border-secondary">
+      <div className="flex h-full min-h-[112px] min-w-0 items-center justify-between gap-6 bg-background-secondary px-5 py-5">
+        <div className="flex min-w-0 flex-col gap-3">
+          <p className="truncate text-[10px] font-semibold uppercase leading-3 tracking-[0.1em] text-white/45">{label}</p>
+          <p className="truncate text-[30px] font-medium leading-8 tracking-tight text-text-primary">{value}</p>
+          {hint && <p className="truncate text-xs leading-4 text-white/40">{hint}</p>}
+        </div>
+        {illustration}
       </div>
-      {illustration}
     </div>
   );
 }

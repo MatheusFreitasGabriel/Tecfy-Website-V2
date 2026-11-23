@@ -109,7 +109,7 @@ export function LeadsSkeleton() {
               <div className={`${block} h-3.5`} style={{ width: `${45 + ((i * 37) % 40)}%`, maxWidth: 260 }} />
               <div className={`${block} h-3 w-24`} />
             </div>
-            <div className={`${block} hidden h-7 w-[86px] rounded-[7px] md:block`} />
+            <div className={`${block} hidden h-7 w-[86px] rounded-lg md:block`} />
             <div className={`${block} hidden h-3.5 w-32 md:block`} />
             <div className={`${block} hidden h-3.5 w-20 lg:block`} />
             <div className={`${block} h-5 w-5 rounded-full`} />

@@ -48,7 +48,7 @@ type ModalState = null | { kind: "create"; stageId: string | null } | { kind: "c
 
 const integer = new Intl.NumberFormat("pt-BR");
 const controlClass =
-  "h-11 w-full min-w-0 cursor-pointer appearance-none rounded-[10px] bg-background-kpi pl-3.5 pr-10 text-[13px] font-medium leading-5 text-text-primary outline outline-1 -outline-offset-1 outline-admin-picker-border focus:outline-2 focus:outline-admin-primary [color-scheme:dark]";
+  "h-11 w-full min-w-0 cursor-pointer appearance-none rounded-lg bg-background-kpi pl-3.5 pr-10 text-[13px] font-medium leading-5 text-text-primary outline outline-1 -outline-offset-1 outline-admin-picker-border focus:outline-2 focus:outline-admin-primary [color-scheme:dark]";
 
 /** Troca parâmetros da URL sem recarregar (funil e visão ficam no link: dá para compartilhar). */
 function setUrlParams(params: Record<string, string | null>) {
@@ -272,7 +272,7 @@ export default function DealsView({ deals, truncated, boards, pipelines, admins,
         <FaHandshake aria-hidden className="h-8 w-8 text-admin-accent" />
         <h1 className="text-2xl font-semibold text-text-primary">Nenhum funil ativo</h1>
         <p className="max-w-md text-sm text-admin-text-description">Crie um quadro e um funil (com até 6 etapas) para começar a organizar as negociações.</p>
-        <Link href={`${basePath}/negociacoes/funis`} className="inline-flex h-11 items-center gap-2 rounded-[10px] bg-admin-primary px-6 text-sm font-semibold text-text-primary hover:bg-admin-primary-hover">
+        <Link href={`${basePath}/negociacoes/funis`} className="inline-flex h-11 items-center gap-2 rounded-lg bg-admin-primary px-6 text-sm font-semibold text-admin-primary-text hover:bg-admin-primary-hover">
           <FaSliders aria-hidden className="h-3.5 w-3.5" /> Gerenciar funis
         </Link>
       </div>
@@ -326,12 +326,12 @@ export default function DealsView({ deals, truncated, boards, pipelines, admins,
           </PlainSelect>
           <Link
             href={`${basePath}/negociacoes/funis?funil=${pipelineId}`}
-            className="inline-flex h-11 items-center justify-center gap-2 rounded-[10px] px-4 text-[13px] font-semibold text-admin-accent outline outline-1 -outline-offset-1 outline-admin-picker-border transition-colors hover:bg-admin-card"
+            className="inline-flex h-11 items-center justify-center gap-2 rounded-lg px-4 text-[13px] font-semibold text-admin-accent outline outline-1 -outline-offset-1 outline-admin-picker-border transition-colors hover:bg-admin-card"
           >
             <FaSliders aria-hidden className="h-3.5 w-3.5" /> Gerenciar funis
           </Link>
         </div>
-        <div role="tablist" aria-label="Visualização" className="inline-flex h-11 self-start rounded-[10px] bg-background-kpi p-1 outline outline-1 -outline-offset-1 outline-admin-picker-border lg:self-auto">
+        <div role="tablist" aria-label="Visualização" className="inline-flex h-11 self-start rounded-lg bg-background-kpi p-1 outline outline-1 -outline-offset-1 outline-admin-picker-border lg:self-auto">
           {(
             [
               ["kanban", "Kanban", FaTableColumns],
@@ -344,7 +344,7 @@ export default function DealsView({ deals, truncated, boards, pipelines, admins,
               role="tab"
               aria-selected={view === value}
               onClick={() => chooseView(value)}
-              className="inline-flex items-center gap-2 rounded-lg px-4 text-[13px] font-semibold text-admin-text-description transition-colors aria-selected:bg-admin-primary aria-selected:text-text-primary hover:text-text-primary"
+              className="inline-flex items-center gap-2 rounded-lg px-4 text-[13px] font-semibold text-admin-text-description transition-colors aria-selected:bg-admin-primary aria-selected:text-admin-primary-text hover:text-text-primary"
             >
               <Icon aria-hidden className="h-3.5 w-3.5" /> {label}
             </button>
@@ -416,7 +416,7 @@ export default function DealsView({ deals, truncated, boards, pipelines, admins,
               onClick={() => exportDealsCsv(filtered, pipeline, `negociacoes-${pipeline.name.toLowerCase().replace(/\s+/g, "-")}.csv`)}
               aria-label="Exportar CSV"
               title="Exportar as negociações filtradas (CSV)"
-              className="inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-[10px] bg-background-kpi text-text-primary outline outline-1 -outline-offset-1 outline-admin-picker-border hover:bg-admin-card"
+              className="inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-lg bg-background-kpi text-text-primary outline outline-1 -outline-offset-1 outline-admin-picker-border hover:bg-admin-card"
             >
               <FaDownload aria-hidden className="h-3.5 w-3.5" />
             </button>

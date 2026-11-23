@@ -7,6 +7,7 @@ import { iconOf } from "@/app/components/public/home/plans/planIcons";
 import { productBillings } from "@/lib/admin/crm/options";
 import type { ProductRow } from "@/lib/admin/crm/types";
 import { shortDate } from "@/lib/site/plans";
+import Tag from "../shared/Tag";
 import { PRODUCT_ICONS, integer, livePrice, money, percent, promoCountdown, promoState } from "./productVisuals";
 
 interface ProductCardProps {
@@ -79,13 +80,6 @@ function Menu({ items }: { items: { label: string; icon: typeof FaPen; onClick: 
   );
 }
 
-/** Etiqueta monocromática no estilo do site (caixa alta, borda fina). */
-function Tag({ children, tone = "muted" }: { children: React.ReactNode; tone?: "muted" | "solid" | "live" }) {
-  const style =
-    tone === "solid" ? "border-white bg-white text-background" : tone === "live" ? "border-border-secondary text-white" : "border-border-card text-white/55";
-  return <span className={`inline-flex h-6 items-center gap-1.5 border px-2 text-[10px] font-semibold uppercase tracking-[0.08em] ${style}`}>{children}</span>;
-}
-
 /** "647,00" — formato dos cards do site. */
 const amount = (v: number) => v.toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 
@@ -149,12 +143,11 @@ export default function ProductCard({ product: p, share, href, canMoveUp, canMov
 
         {/* Situação */}
         <div className="flex flex-wrap gap-1.5 px-6 pt-4">
-          <Tag tone={onSite ? "live" : "muted"}>
-            <span aria-hidden className={`h-1.5 w-1.5 rounded-full ${onSite ? "bg-admin-success" : "bg-white/30"}`} />
+          <Tag tone={onSite ? "live" : "muted"} dot={onSite ? "var(--admin-success)" : "rgb(255 255 255 / 0.3)"}>
             {onSite ? "No site" : "Fora do site"}
           </Tag>
           {p.highlight && <Tag tone="live">Destaque</Tag>}
-          {!p.active && <Tag>Inativo</Tag>}
+          {!p.active && <Tag tone="muted">Inativo</Tag>}
           {promo && (
             <Tag tone="solid">
               <FaTag aria-hidden className="h-2.5 w-2.5" /> {promo.promo.name}

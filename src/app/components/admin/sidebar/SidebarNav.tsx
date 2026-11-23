@@ -24,12 +24,12 @@ export default function SidebarNav({ basePath }: { basePath: string }) {
   const current = relativePath(usePathname(), basePath);
 
   return (
-    <nav aria-label="Menu do painel" className="flex w-full flex-col gap-6">
+    <nav aria-label="Menu do painel" className="flex w-full flex-col gap-7">
       {sidebarBlocks.map((block) => (
-        <div key={block.title} className="flex w-full flex-col gap-5">
-          <p className="text-sm font-medium uppercase leading-[14px] text-text-muted">{block.title}</p>
+        <div key={block.title} className="flex w-full flex-col gap-3">
+          <p className="px-3 text-[11px] font-semibold uppercase leading-3 tracking-[0.1em] text-white/35">{block.title}</p>
 
-          <ul className="flex w-full flex-col gap-1.5">
+          <ul className="flex w-full flex-col gap-1">
             {block.items.map((item) => {
               const Icon = item.icon;
               const active = isActive(current, item.href);
@@ -38,13 +38,13 @@ export default function SidebarNav({ basePath }: { basePath: string }) {
                   <Link
                     href={buildAdminHref(basePath, item.href)}
                     aria-current={active ? "page" : undefined}
-                    className={`flex h-12 w-full items-center gap-6 rounded-xl px-3 text-base font-medium leading-4 transition-colors ${
+                    className={`flex h-11 w-full items-center gap-4 border px-3 text-[13px] font-bold uppercase leading-4 tracking-[0.04em] transition-colors ${
                       active
-                        ? "bg-text-primary text-background"
-                        : "text-text-disabled hover:bg-background-surface hover:text-text-muted"
+                        ? "border-white bg-white text-background"
+                        : "border-transparent text-white/45 hover:border-border-primary hover:bg-white/[0.03] hover:text-white"
                     }`}
                   >
-                    <Icon aria-hidden className="h-6 w-6 shrink-0" />
+                    <Icon aria-hidden className="h-[18px] w-[18px] shrink-0" />
                     {item.label}
                   </Link>
                 </li>

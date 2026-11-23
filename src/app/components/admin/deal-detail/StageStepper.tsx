@@ -54,7 +54,7 @@ export default function StageStepper({ deal, pipeline, now, disabled, pendingSta
               style={{ clipPath: i ? MIDDLE : FIRST }}
               className={`group flex h-14 w-full flex-col items-center justify-center gap-0.5 px-6 text-center transition-[filter,background-color] focus-visible:brightness-150 ${
                 state === "current"
-                  ? "bg-admin-primary text-text-primary"
+                  ? "bg-admin-primary text-admin-primary-text"
                   : state === "done"
                     ? "bg-admin-tip text-admin-tip-title hover:brightness-125"
                     : "bg-admin-card text-admin-text-description hover:bg-admin-badge hover:text-text-primary"

@@ -409,7 +409,7 @@ export default function ImportView({ basePath, admins, currentUid, history }: Im
                 <span
                   aria-current={i === stepIndex ? "step" : undefined}
                   className={`flex items-center gap-2 rounded-full px-3 py-1.5 text-xs font-semibold ${
-                    i === stepIndex ? "bg-admin-primary text-text-primary" : i < stepIndex ? "bg-admin-tip text-admin-tip-title" : "bg-admin-badge text-admin-text-hint"
+                    i === stepIndex ? "bg-admin-primary text-admin-primary-text" : i < stepIndex ? "bg-admin-tip text-admin-tip-title" : "bg-admin-badge text-admin-text-hint"
                   }`}
                 >
                   <span className="tabular-nums">{i + 1}</span> {s.label}

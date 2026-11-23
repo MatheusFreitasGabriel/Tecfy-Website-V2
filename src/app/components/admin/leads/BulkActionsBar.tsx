@@ -26,7 +26,7 @@ function ActionSelect({ label, options, disabled, onPick }: { label: string; opt
         disabled={disabled}
         aria-label={label}
         onChange={(e) => e.target.value && onPick(e.target.value)}
-        className="h-11 cursor-pointer appearance-none rounded-[10px] bg-admin-card pl-4 pr-9 text-sm font-semibold text-text-primary outline outline-1 -outline-offset-1 outline-admin-button-border [color-scheme:dark] hover:bg-admin-badge focus:outline-2 focus:outline-admin-primary disabled:cursor-not-allowed disabled:opacity-50"
+        className="h-11 cursor-pointer appearance-none rounded-lg bg-admin-card pl-4 pr-9 text-sm font-semibold text-text-primary outline outline-1 -outline-offset-1 outline-admin-button-border [color-scheme:dark] hover:bg-admin-badge focus:outline-2 focus:outline-admin-primary disabled:cursor-not-allowed disabled:opacity-50"
       >
         <option value="" disabled>
           {label}

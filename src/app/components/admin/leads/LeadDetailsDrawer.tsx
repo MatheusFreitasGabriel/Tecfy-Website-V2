@@ -160,7 +160,7 @@ export default function LeadDetailsDrawer({
             type="button"
             onClick={onClose}
             aria-label="Fechar"
-            className="flex h-11 w-11 items-center justify-center rounded-[10px] bg-admin-drawer-card text-text-primary outline outline-1 -outline-offset-1 outline-admin-control-disabled-border hover:bg-admin-badge"
+            className="flex h-11 w-11 items-center justify-center rounded-lg bg-admin-drawer-card text-text-primary outline outline-1 -outline-offset-1 outline-admin-control-disabled-border hover:bg-admin-badge"
           >
             <FaXmark aria-hidden className="h-5 w-5" />
           </button>
@@ -177,13 +177,13 @@ export default function LeadDetailsDrawer({
           )}
 
           <div className="mt-8 grid grid-cols-1 gap-4 sm:grid-cols-2">
-            <div className="flex h-[84px] flex-col justify-center gap-1.5 rounded-[10px] border border-admin-card-border bg-admin-drawer-card px-4">
+            <div className="flex h-[84px] flex-col justify-center gap-1.5 rounded-lg border border-admin-card-border bg-admin-drawer-card px-4">
               <span className="text-xs font-medium leading-[18px] text-admin-text-description">Qualificação</span>
               <span className={`text-[15px] font-medium leading-[21px] ${qualificationTextColors[lead.qualification]}`}>
                 {leadQualifications.label(lead.qualification)}
               </span>
             </div>
-            <div className="flex h-[84px] flex-col justify-center gap-1.5 rounded-[10px] border border-admin-card-border bg-admin-drawer-card px-4">
+            <div className="flex h-[84px] flex-col justify-center gap-1.5 rounded-lg border border-admin-card-border bg-admin-drawer-card px-4">
               <span className="text-xs font-medium leading-[18px] text-admin-text-description">Etapa atual</span>
               <span className="text-sm font-medium leading-5 text-admin-drawer-value">{leadStages.label(lead.stage)}</span>
             </div>

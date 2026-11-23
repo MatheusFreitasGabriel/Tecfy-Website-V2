@@ -219,11 +219,11 @@ export default function NotificationBell({ basePath }: { basePath: string }) {
             load("full");
           }}
           aria-label={label}
-          className="relative flex h-[43px] w-[43px] shrink-0 items-center justify-center rounded-full border border-border-input bg-background-surface text-text-muted transition-colors hover:text-text-primary focus-visible:outline-2 focus-visible:outline-admin-accent"
+          className="relative flex h-[43px] w-[43px] shrink-0 items-center justify-center border border-border-secondary bg-background-secondary hover:border-white/50 text-text-muted transition-colors hover:text-text-primary focus-visible:outline-2 focus-visible:outline-admin-accent"
         >
           <FaBell aria-hidden className="h-4 w-4" />
           {unread > 0 && (
-            <span className="absolute -right-1 -top-1 flex h-5 min-w-5 items-center justify-center rounded-full bg-admin-primary px-1 text-[11px] font-semibold text-text-primary">
+            <span className="absolute -right-1 -top-1 flex h-5 min-w-5 items-center justify-center rounded-full bg-admin-primary px-1 text-[11px] font-semibold text-admin-primary-text">
               {unread > 9 ? "9+" : unread}
             </span>
           )}

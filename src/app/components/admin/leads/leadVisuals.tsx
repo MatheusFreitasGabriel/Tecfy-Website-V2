@@ -76,7 +76,7 @@ export function QualificationSelect({ value, onChange, disabled, leadTitle }: Qu
           disabled={disabled}
           aria-label={`Qualificação de ${leadTitle}`}
           onChange={(e) => leadQualifications.is(e.target.value) && onChange(e.target.value)}
-          className={`h-7 cursor-pointer appearance-none rounded-[7px] pl-3 pr-7 text-xs font-medium leading-[18px] outline-none transition-opacity [color-scheme:dark] focus-visible:ring-2 focus-visible:ring-admin-accent disabled:cursor-wait disabled:opacity-60 ${qualificationColors[value]}`}
+          className={`h-7 cursor-pointer appearance-none rounded-lg pl-3 pr-7 text-xs font-medium leading-[18px] outline-none transition-opacity [color-scheme:dark] focus-visible:ring-2 focus-visible:ring-admin-accent disabled:cursor-wait disabled:opacity-60 ${qualificationColors[value]}`}
         >
           {leadQualifications.options.map((o) => (
             <option key={o.value} value={o.value} className="bg-admin-card text-text-primary">

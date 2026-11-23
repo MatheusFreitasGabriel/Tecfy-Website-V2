@@ -70,7 +70,7 @@ export default function SearchModal({ basePath, onClose }: SearchModalProps) {
 
   return createPortal(
     <div
-      className="admin-search-overlay fixed inset-0 z-50 flex justify-center bg-black/70 px-4 pt-[12vh] backdrop-blur-sm"
+      className="admin-search-overlay fixed inset-0 z-50 flex justify-center bg-black/80 px-4 pt-[12vh] backdrop-blur-sm"
       onMouseDown={(event) => event.target === event.currentTarget && onClose()}
     >
       <div
@@ -78,7 +78,7 @@ export default function SearchModal({ basePath, onClose }: SearchModalProps) {
         aria-modal="true"
         aria-label="Pesquisar funcionalidades"
         onKeyDown={onKeyDown}
-        className="admin-search-panel flex h-fit max-h-[70vh] w-full max-w-[600px] flex-col overflow-hidden rounded-xl border border-border-input bg-background-surface shadow-2xl"
+        className="admin-search-panel flex h-fit max-h-[70vh] w-full max-w-[600px] flex-col overflow-hidden border border-border-secondary bg-background shadow-2xl shadow-black"
       >
         <div className="flex items-center gap-4 border-b border-border-input py-4 pl-4 pr-2.5">
           <FaMagnifyingGlass aria-hidden className="h-4 w-4 shrink-0 text-text-muted" />

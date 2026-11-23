@@ -89,7 +89,7 @@ export default function LeadsPagination({ page, pageCount, perPage, total, onPag
                   aria-label={`Página ${p}`}
                   className={`h-[38px] min-w-10 rounded-md px-3 text-[13px] leading-[19px] transition-colors ${
                     p === page
-                      ? "bg-admin-primary font-semibold text-text-primary"
+                      ? "bg-admin-primary font-semibold text-admin-primary-text"
                       : "bg-admin-control font-medium text-admin-text-label outline outline-1 -outline-offset-1 outline-admin-control-border hover:bg-admin-card"
                   }`}
                 >

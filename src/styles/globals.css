@@ -41,84 +41,86 @@
   --border-card: #252525;
 
   /* Painel admin */
-  --background-surface: #151515;
+  --background-surface: #0C0C0C;
   --text-muted: #C2C2C2;
-  --text-disabled: #4D4D4D;
-  --background-kpi: #141414;
-  --text-kpi-label: #828282;
+  --text-disabled: #3B3B3B;
+  --background-kpi: #080808;
+  --text-kpi-label: #8A8A8A;
   --illustration-1: #272727;
   --illustration-2: #323232;
   --illustration-3: #383838;
   --illustration-stroke: #676767;
 
   /* Painel admin: CRM (telas, modais e formulários) */
-  --admin-primary: #3901FB;
-  --admin-primary-hover: #4C1CFF;
-  --admin-accent: #C3ACFF;
-  --admin-badge: #202020;
+  --admin-primary: #FFFFFF;
+  --admin-primary-hover: #D9D9D9;
+  /* Texto sobre o botão principal (branco, como o CTA do site). */
+  --admin-primary-text: #000000;
+  --admin-accent: #FFFFFF;
+  --admin-badge: #141414;
   --admin-badge-text: #D6D6D6;
   --admin-text-description: #A3A3A3;
   --admin-text-label: #BDBDBD;
   --admin-text-hint: #999999;
   --admin-text-input: #F3F3F3;
-  --admin-input: #0D0D0D;
+  --admin-input: #080808;
   --admin-input-border: #3B3B3B;
-  --admin-picker: #101010;
-  --admin-picker-border: #3C3C3C;
-  --admin-card: #1B1B1B;
-  --admin-card-border: #333333;
-  --admin-button-border: #424242;
-  --admin-divider: #303030;
-  --admin-tip: #211A2D;
-  --admin-tip-title: #D2BFFF;
-  --admin-tip-text: #B4A7CB;
+  --admin-picker: #080808;
+  --admin-picker-border: #3B3B3B;
+  --admin-card: #0F0F0F;
+  --admin-card-border: #252525;
+  --admin-button-border: #3B3B3B;
+  --admin-divider: #1B1B1B;
+  --admin-tip: #141414;
+  --admin-tip-title: #FFFFFF;
+  --admin-tip-text: #B3B3B3;
   --admin-danger: #F87171;
   --admin-success: #4ADE80;
   --admin-danger-strong: #DC2626;
   --admin-danger-strong-hover: #EF4444;
 
   /* Painel admin: lista de leads e painel de detalhes */
-  --admin-table: #0C0C0C;
-  --admin-table-alt: #101010;
-  --admin-table-head: #181818;
-  --admin-table-head-text: #AEAEAE;
-  --admin-table-border: #2C2C2C;
-  --admin-table-divider: #242424;
+  --admin-table: #080808;
+  --admin-table-alt: #0A0A0A;
+  --admin-table-head: #0C0C0C;
+  --admin-table-head-text: #8A8A8A;
+  --admin-table-border: #1B1B1B;
+  --admin-table-divider: #1B1B1B;
   --admin-table-subtext: #9B9B9B;
   --admin-table-date: #B8B8B8;
-  --admin-control: #151515;
-  --admin-control-border: #454545;
+  --admin-control: #080808;
+  --admin-control-border: #3B3B3B;
   --admin-control-disabled-border: #4D4D4D;
-  --admin-drawer-border: #343434;
-  --admin-drawer-card: #1C1C1C;
+  --admin-drawer-border: #252525;
+  --admin-drawer-card: #0C0C0C;
   --admin-drawer-muted: #B0B0B0;
   --admin-drawer-value: #EFEFEF;
   --admin-drawer-notes: #CCCCCC;
-  --admin-qual-hot: #332217;
+  --admin-qual-hot: #0F0F0F;
   --admin-qual-hot-text: #FFAB6B;
-  --admin-qual-warm: #281B3D;
-  --admin-qual-warm-text: #D5B9FF;
-  --admin-qual-cold: #18263C;
+  --admin-qual-warm: #0F0F0F;
+  --admin-qual-warm-text: #C9B8FF;
+  --admin-qual-cold: #0F0F0F;
   --admin-qual-cold-text: #91BAFF;
-  --admin-qual-sure: #12301F;
+  --admin-qual-sure: #0F0F0F;
   --admin-qual-sure-text: #6EE7A0;
   --admin-tooltip: #F4F4F5;
   --admin-tooltip-text: #111111;
   --admin-whatsapp: #25D366;
   /* Negociações: status, estrelas, Kanban e cores das etapas */
-  --admin-deal-progress: #14263A;
+  --admin-deal-progress: #0F0F0F;
   --admin-deal-progress-text: #7DD3FC;
-  --admin-deal-paused: #242424;
+  --admin-deal-paused: #0F0F0F;
   --admin-deal-paused-text: #B4B4B4;
-  --admin-deal-lost: #3A1717;
+  --admin-deal-lost: #0F0F0F;
   --admin-deal-lost-text: #FCA5A5;
-  --admin-deal-won: #12301F;
+  --admin-deal-won: #0F0F0F;
   --admin-deal-won-text: #6EE7A0;
   --admin-star: #FBBF24;
-  --admin-column: #0E0E0E;
-  --admin-column-border: #262626;
-  --admin-deal-card: #171717;
-  --admin-deal-card-hover: #1E1E1E;
+  --admin-column: #050505;
+  --admin-column-border: #1B1B1B;
+  --admin-deal-card: #0C0C0C;
+  --admin-deal-card-hover: #121212;
   --admin-stage-slate: #94A3B8;
   --admin-stage-blue: #60A5FA;
   --admin-stage-violet: #A78BFA;
@@ -193,6 +195,7 @@
   --color-illustration-stroke: var(--illustration-stroke);
   --color-admin-primary: var(--admin-primary);
   --color-admin-primary-hover: var(--admin-primary-hover);
+  --color-admin-primary-text: var(--admin-primary-text);
   --color-admin-accent: var(--admin-accent);
   --color-admin-badge: var(--admin-badge);
   --color-admin-badge-text: var(--admin-badge-text);
@@ -500,6 +503,20 @@ body {
   overflow-x: hidden;
 }
 
+/* Painel admin: identidade do site — cantos retos em tudo (rounded-full continua redondo).
+   Fica no body para valer também nos modais/gavetas renderizados fora do .admin-shell. */
+body:has(.admin-shell) {
+  --radius-xs: 0;
+  --radius-sm: 0;
+  --radius-md: 0;
+  --radius-lg: 0;
+  --radius-xl: 0;
+  --radius-2xl: 0;
+  --radius-3xl: 0;
+  --radius-4xl: 0;
+  --radius: 0;
+}
+
 /* Painel admin: checkbox (todas as telas e modais do painel; o site público não muda). */
 body:has(.admin-shell) input[type="checkbox"] {
   appearance: none;
@@ -510,8 +527,8 @@ body:has(.admin-shell) input[type="checkbox"] {
   min-width: 18px;
   min-height: 18px;
   margin: 0;
-  border-radius: 6px;
-  border: 1.5px solid var(--admin-input-border);
+  border-radius: 0;
+  border: 1px solid var(--admin-input-border);
   background: var(--admin-input);
   cursor: pointer;
   transition: background-color 150ms ease, border-color 150ms ease, box-shadow 150ms ease, transform 100ms ease;
@@ -522,7 +539,7 @@ body:has(.admin-shell) input[type="checkbox"]::before {
   height: 62%;
   transform: scale(0);
   transition: transform 140ms cubic-bezier(0.2, 0.8, 0.2, 1);
-  background: #fff;
+  background: #000;
   /* check (✓) desenhado com máscara */
   clip-path: polygon(14% 52%, 0 66%, 38% 100%, 100% 22%, 86% 8%, 38% 72%);
 }
@@ -541,7 +558,7 @@ body:has(.admin-shell) input[type="checkbox"]:checked::before {
 }
 body:has(.admin-shell) input[type="checkbox"]:focus-visible {
   outline: none;
-  box-shadow: 0 0 0 3px color-mix(in srgb, var(--admin-primary) 45%, transparent);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--primary) 70%, transparent);
 }
 body:has(.admin-shell) input[type="checkbox"]:disabled {
   cursor: not-allowed;

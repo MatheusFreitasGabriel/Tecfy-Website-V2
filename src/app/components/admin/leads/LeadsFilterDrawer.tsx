@@ -52,7 +52,7 @@ function Pills({ options, value, onChange }: { options: readonly Option[]; value
             onClick={() => onChange(on ? value.filter((v) => v !== o.value) : [...value, o.value])}
             className={`inline-flex h-8 items-center gap-1.5 rounded-full px-3 text-xs font-medium transition-colors focus-visible:outline-2 focus-visible:outline-admin-accent ${
               on
-                ? "bg-admin-primary text-text-primary"
+                ? "bg-admin-primary text-admin-primary-text"
                 : "bg-admin-drawer-card text-admin-text-label outline outline-1 -outline-offset-1 outline-admin-card-border hover:bg-admin-badge"
             }`}
           >

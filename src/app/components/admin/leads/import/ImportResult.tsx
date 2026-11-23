@@ -70,7 +70,7 @@ export default function ImportResult({ results, skipped, basePath, onRetryFailed
           </Button>
           <Link
             href={`${basePath}/leads`}
-            className="inline-flex h-11 items-center justify-center gap-2 rounded-[10px] bg-admin-primary px-6 text-sm font-semibold leading-5 text-text-primary transition-colors hover:bg-admin-primary-hover"
+            className="inline-flex h-11 items-center justify-center gap-2 rounded-lg bg-admin-primary px-6 text-sm font-semibold leading-5 text-admin-primary-text transition-colors hover:bg-admin-primary-hover"
           >
             <FaList aria-hidden className="h-3.5 w-3.5" /> Ver leads
           </Link>

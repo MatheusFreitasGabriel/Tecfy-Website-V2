@@ -137,8 +137,8 @@ export default function TemplatesManager({ basePath, templates, initialChannel =
                 setChannel(value);
                 setEditing(null);
               }}
-              className={`inline-flex h-10 items-center gap-2 rounded-[10px] px-4 text-sm font-semibold transition-colors ${
-                channel === value ? "bg-admin-primary text-text-primary" : "bg-admin-card text-admin-text-label hover:bg-admin-badge"
+              className={`inline-flex h-10 items-center gap-2 rounded-lg px-4 text-sm font-semibold transition-colors ${
+                channel === value ? "bg-admin-primary text-admin-primary-text" : "bg-admin-card text-admin-text-label hover:bg-admin-badge"
               }`}
             >
               <Icon aria-hidden className="h-3.5 w-3.5" />

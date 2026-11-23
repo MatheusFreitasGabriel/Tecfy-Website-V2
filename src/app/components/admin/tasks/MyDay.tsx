@@ -101,7 +101,7 @@ export default function MyDay({ tasks, admins, currentUid, now, basePath, busyId
             <select
               value={person}
               onChange={(e) => setPerson(e.target.value)}
-              className="h-11 w-full cursor-pointer appearance-none rounded-[10px] bg-background-kpi pl-3.5 pr-10 text-[13px] font-medium text-text-primary outline outline-1 -outline-offset-1 outline-admin-picker-border focus:outline-2 focus:outline-admin-primary [color-scheme:dark]"
+              className="h-11 w-full cursor-pointer appearance-none rounded-lg bg-background-kpi pl-3.5 pr-10 text-[13px] font-medium text-text-primary outline outline-1 -outline-offset-1 outline-admin-picker-border focus:outline-2 focus:outline-admin-primary [color-scheme:dark]"
             >
               {admins.map((a) => (
                 <option key={a.uid} value={a.uid}>

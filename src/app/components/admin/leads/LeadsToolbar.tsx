@@ -21,7 +21,7 @@ interface LeadsToolbarProps {
 }
 
 const controlClass =
-  "h-11 w-full min-w-0 rounded-[10px] bg-background-kpi text-[13px] font-medium leading-5 text-text-primary outline outline-1 -outline-offset-1 outline-admin-picker-border transition-[outline-color] focus:outline-2 focus:outline-admin-primary [color-scheme:dark]";
+  "h-11 w-full min-w-0 rounded-lg bg-background-kpi text-[13px] font-medium leading-5 text-text-primary outline outline-1 -outline-offset-1 outline-admin-picker-border transition-[outline-color] focus:outline-2 focus:outline-admin-primary [color-scheme:dark]";
 
 const MULTI = "__multi__";
 
@@ -72,7 +72,7 @@ function QuickSelect({
 }
 
 const outlineButton =
-  "inline-flex h-11 shrink-0 items-center justify-center gap-2 rounded-[10px] bg-background-kpi px-4 text-sm font-semibold text-text-primary outline outline-1 -outline-offset-1 outline-admin-picker-border transition-colors hover:bg-admin-card focus-visible:outline-2 focus-visible:outline-admin-primary";
+  "inline-flex h-11 shrink-0 items-center justify-center gap-2 rounded-lg bg-background-kpi px-4 text-sm font-semibold text-text-primary outline outline-1 -outline-offset-1 outline-admin-picker-border transition-colors hover:bg-admin-card focus-visible:outline-2 focus-visible:outline-admin-primary";
 
 /** Busca, botões (filtros, exportar, modelos), filtros rápidos e chips dos filtros ativos. */
 export default function LeadsToolbar({
@@ -110,7 +110,7 @@ export default function LeadsToolbar({
             <FaSliders aria-hidden className="h-3.5 w-3.5" />
             Filtros
             {activeCount > 0 && (
-              <span className="flex h-5 min-w-5 items-center justify-center rounded-full bg-admin-primary px-1.5 text-[11px] font-semibold">{activeCount}</span>
+              <span className="flex h-5 min-w-5 items-center justify-center rounded-full bg-admin-primary px-1.5 text-[11px] font-semibold text-admin-primary-text">{activeCount}</span>
             )}
           </button>
           <button type="button" onClick={onExport} disabled={resultCount === 0} className={`${outlineButton} disabled:cursor-not-allowed disabled:opacity-50`}>

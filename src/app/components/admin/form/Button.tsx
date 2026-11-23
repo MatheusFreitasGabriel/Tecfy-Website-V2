@@ -3,11 +3,11 @@ import type { IconType } from "react-icons";
 type Variant = "primary" | "secondary" | "ghost" | "danger";
 
 const variants: Record<Variant, string> = {
-  primary: "bg-admin-primary text-text-primary hover:bg-admin-primary-hover",
-  danger: "bg-admin-danger-strong text-text-primary hover:bg-admin-danger-strong-hover",
+  primary: "bg-admin-primary text-admin-primary-text hover:bg-admin-primary-hover",
+  danger: "border border-admin-danger/60 text-admin-danger hover:border-admin-danger hover:bg-admin-danger/10",
   secondary:
-    "bg-admin-card text-text-primary outline outline-1 -outline-offset-1 outline-admin-button-border hover:bg-admin-badge",
-  ghost: "text-admin-accent hover:bg-admin-card",
+    "border border-admin-button-border bg-transparent text-text-primary hover:border-white/60 hover:bg-white/5",
+  ghost: "text-white/70 hover:bg-white/5 hover:text-white",
 };
 
 type ButtonProps = Omit<React.ButtonHTMLAttributes<HTMLButtonElement>, "className"> & {
@@ -18,13 +18,13 @@ type ButtonProps = Omit<React.ButtonHTMLAttributes<HTMLButtonElement>, "classNam
   className?: string;
 };
 
-/** Botões do painel (44px de altura, raio 10, texto 14/600). */
+/** Botões do painel na identidade do site: 44px, cantos retos; principal branco com texto preto (como o CTA da landing). */
 export default function Button({ variant = "primary", icon: Icon, block, className, children, ...props }: ButtonProps) {
   return (
     <button
       type="button"
       {...props}
-      className={`inline-flex h-11 items-center justify-center gap-2 whitespace-nowrap rounded-[10px] px-6 text-sm font-semibold leading-5 transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-admin-accent disabled:cursor-not-allowed disabled:opacity-50 ${
+      className={`inline-flex h-11 items-center justify-center gap-2 whitespace-nowrap rounded-lg px-6 text-sm font-semibold leading-5 transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary disabled:cursor-not-allowed disabled:opacity-50 ${
         variants[variant]
       } ${block ? "w-full" : ""} ${className ?? ""}`}
     >

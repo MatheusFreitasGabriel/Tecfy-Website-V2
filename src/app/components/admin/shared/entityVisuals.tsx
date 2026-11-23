@@ -12,7 +12,7 @@ export function StatusBadge({ status }: { status: EntityStatus }) {
     <Tooltip label={`Status: ${entityStatuses.label(status)}`} description={entityStatuses.hint(status)}>
       <span
         tabIndex={0}
-        className={`inline-flex h-7 items-center gap-1.5 rounded-[7px] px-2.5 text-xs font-medium outline-none focus-visible:ring-2 focus-visible:ring-admin-accent ${
+        className={`inline-flex h-7 items-center gap-1.5 rounded-lg px-2.5 text-xs font-medium outline-none focus-visible:ring-2 focus-visible:ring-admin-accent ${
           active ? "bg-admin-success/10 text-admin-success" : "bg-admin-badge text-admin-text-hint"
         }`}
       >

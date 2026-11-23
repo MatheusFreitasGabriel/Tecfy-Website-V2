@@ -36,7 +36,7 @@ const STATUS_STYLE = {
   upcoming: "bg-admin-deal-progress text-admin-deal-progress-text",
 } as const;
 const controlClass =
-  "h-11 w-full min-w-0 cursor-pointer appearance-none rounded-[10px] bg-background-kpi pl-3.5 pr-10 text-[13px] font-medium text-text-primary outline outline-1 -outline-offset-1 outline-admin-picker-border focus:outline-2 focus:outline-admin-primary [color-scheme:dark]";
+  "h-11 w-full min-w-0 cursor-pointer appearance-none rounded-lg bg-background-kpi pl-3.5 pr-10 text-[13px] font-medium text-text-primary outline outline-1 -outline-offset-1 outline-admin-picker-border focus:outline-2 focus:outline-admin-primary [color-scheme:dark]";
 const smallSelect =
   "h-9 cursor-pointer rounded-lg bg-admin-input px-3 text-[13px] font-medium text-text-primary outline outline-1 -outline-offset-1 outline-admin-input-border focus:outline-2 focus:outline-admin-primary [color-scheme:dark]";
 
@@ -124,7 +124,7 @@ export default function TasksList({ tasks, admins, currentUid, now, basePath, bu
       <div className="flex flex-col gap-3">
         <div className="flex flex-col gap-3 xl:flex-row">
           <SearchInput value={query} onChange={reset(setQuery)} placeholder="Buscar tarefa, observação, vínculo ou responsável" />
-          <button type="button" onClick={exportCsv} disabled={!filtered.length} className="inline-flex h-11 shrink-0 items-center justify-center gap-2 rounded-[10px] bg-background-kpi px-4 text-[13px] font-semibold text-text-primary outline outline-1 -outline-offset-1 outline-admin-picker-border hover:bg-admin-card disabled:opacity-40">
+          <button type="button" onClick={exportCsv} disabled={!filtered.length} className="inline-flex h-11 shrink-0 items-center justify-center gap-2 rounded-lg bg-background-kpi px-4 text-[13px] font-semibold text-text-primary outline outline-1 -outline-offset-1 outline-admin-picker-border hover:bg-admin-card disabled:opacity-40">
             <FaDownload aria-hidden className="h-3.5 w-3.5" /> Exportar
           </button>
         </div>
@@ -200,7 +200,7 @@ export default function TasksList({ tasks, admins, currentUid, now, basePath, bu
       {chosen.length > 0 && (
         <div role="toolbar" aria-label="Ações nas tarefas selecionadas" className="flex flex-wrap items-center gap-2 rounded-xl bg-admin-tip px-3 py-2">
           <span className="px-1 text-[13px] font-semibold text-admin-tip-title">{chosen.length} selecionada(s)</span>
-          <button type="button" disabled={busy} onClick={() => bulk("complete")} className="h-9 rounded-lg bg-admin-primary px-3 text-[13px] font-semibold text-text-primary hover:bg-admin-primary-hover disabled:opacity-50">
+          <button type="button" disabled={busy} onClick={() => bulk("complete")} className="h-9 rounded-lg bg-admin-primary px-3 text-[13px] font-semibold text-admin-primary-text hover:bg-admin-primary-hover disabled:opacity-50">
             Concluir
           </button>
           <button type="button" disabled={busy} onClick={() => bulk("reopen")} className="h-9 rounded-lg px-3 text-[13px] font-semibold text-admin-tip-title hover:bg-admin-card disabled:opacity-50">

@@ -600,7 +600,7 @@ function PipelineEditor({
             </div>
             <div className="flex flex-wrap gap-2">
               {pipeline && !pipeline.archived && (
-                <Link href={`${basePath}/negociacoes?funil=${pipeline.id}`} className="inline-flex h-11 items-center gap-2 rounded-[10px] px-4 text-[13px] font-semibold text-admin-accent outline outline-1 -outline-offset-1 outline-admin-card-border hover:bg-admin-card">
+                <Link href={`${basePath}/negociacoes?funil=${pipeline.id}`} className="inline-flex h-11 items-center gap-2 rounded-lg px-4 text-[13px] font-semibold text-admin-accent outline outline-1 -outline-offset-1 outline-admin-card-border hover:bg-admin-card">
                   <FaTableColumns aria-hidden className="h-3.5 w-3.5" /> Ver no Kanban
                 </Link>
               )}
@@ -848,7 +848,7 @@ function ChevronPreview({ names, details, compact }: { names: string[]; details?
         <li key={`${i}-${name}`} className={`min-w-0 flex-1 ${i ? "-ml-1.5" : ""}`}>
           <span
             style={{ clipPath: chevron(i) }}
-            className={`flex w-full flex-col items-center justify-center px-4 text-center ${compact ? "h-8" : "h-14"} ${i === 0 ? "bg-admin-primary text-text-primary" : "bg-admin-badge text-admin-text-label"}`}
+            className={`flex w-full flex-col items-center justify-center px-4 text-center ${compact ? "h-8" : "h-14"} ${i === 0 ? "bg-admin-primary text-admin-primary-text" : "bg-admin-badge text-admin-text-label"}`}
           >
             <span className={`max-w-full truncate font-semibold ${compact ? "text-[10px]" : "text-[12px]"}`}>{name}</span>
             {!compact && details?.[i] && <span className="text-[10px] font-medium opacity-75">{details[i]}</span>}

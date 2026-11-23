@@ -22,19 +22,19 @@ export default function Drawer({ title, eyebrow, onClose, footer, children, widt
   const id = useModalBehavior(panelRef, onClose);
 
   return createPortal(
-    <div className="admin-modal-overlay fixed inset-0 z-50 flex justify-end bg-black/60" onMouseDown={(e) => e.target === e.currentTarget && onClose()}>
+    <div className="admin-modal-overlay fixed inset-0 z-50 flex justify-end bg-black/75" onMouseDown={(e) => e.target === e.currentTarget && onClose()}>
       <aside
         ref={panelRef}
         role="dialog"
         aria-modal="true"
         aria-labelledby={`${id}-title`}
         tabIndex={-1}
-        className={`admin-drawer-panel flex h-full w-full ${widthClass} flex-col bg-background-kpi outline outline-1 -outline-offset-1 outline-admin-drawer-border focus:outline-admin-drawer-border`}
+        className={`admin-drawer-panel flex h-full w-full ${widthClass} flex-col bg-background outline outline-1 -outline-offset-1 outline-border-secondary focus:outline-border-secondary`}
       >
         <header className="flex min-h-20 shrink-0 items-center justify-between gap-4 border-b border-admin-table-border px-7 py-4">
           <div className="min-w-0">
-            {eyebrow && <p className="text-xs font-medium text-admin-drawer-muted">{eyebrow}</p>}
-            <h2 id={`${id}-title`} className="truncate text-lg font-semibold leading-6 text-text-primary">
+            {eyebrow && <p className="text-[11px] font-semibold uppercase tracking-[0.06em] text-secondary">{eyebrow}</p>}
+            <h2 id={`${id}-title`} className="truncate text-lg font-bold uppercase leading-6 tracking-tight text-text-primary">
               {title}
             </h2>
           </div>
@@ -42,7 +42,7 @@ export default function Drawer({ title, eyebrow, onClose, footer, children, widt
             type="button"
             onClick={onClose}
             aria-label="Fechar"
-            className="flex h-11 w-11 shrink-0 items-center justify-center rounded-[10px] bg-admin-drawer-card text-text-primary outline outline-1 -outline-offset-1 outline-admin-control-disabled-border hover:bg-admin-badge"
+            className="flex h-11 w-11 shrink-0 items-center justify-center border border-admin-button-border text-white/70 hover:border-white/60 hover:text-white"
           >
             <FaXmark aria-hidden className="h-5 w-5" />
           </button>

@@ -21,7 +21,7 @@ export default function RelatedLeads({ leads, basePath, emptyText }: { leads: Le
               {lead.owner_name ? ` · ${lead.owner_name}` : ""}
             </p>
           </div>
-          <span className={`shrink-0 rounded-[7px] px-2.5 py-1 text-xs font-medium ${qualificationColors[lead.qualification]}`}>
+          <span className={`shrink-0 rounded-lg px-2.5 py-1 text-xs font-medium ${qualificationColors[lead.qualification]}`}>
             {leadQualifications.label(lead.qualification)}
           </span>
           <LeadStatusIcon status={lead.status} />

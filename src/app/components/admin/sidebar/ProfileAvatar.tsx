@@ -15,7 +15,7 @@ export default function ProfileAvatar({ email, name, picture }: ProfileAvatarPro
   return (
     <div
       title={label}
-      className="flex h-[43px] w-[43px] shrink-0 items-center justify-center overflow-hidden rounded-full border border-border-input bg-background-surface"
+      className="flex h-[43px] w-[43px] shrink-0 items-center justify-center overflow-hidden border border-border-secondary bg-background-secondary"
     >
       {picture ? (
         // eslint-disable-next-line @next/next/no-img-element -- URL externa do Firebase; evita configurar remotePatterns

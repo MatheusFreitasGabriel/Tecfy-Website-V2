@@ -29,13 +29,13 @@ export default function SidebarSearch({ basePath }: { basePath: string }) {
         onClick={() => setOpen(true)}
         aria-haspopup="dialog"
         aria-expanded={open}
-        className="flex w-full cursor-pointer items-center justify-between rounded-xl bg-background-surface py-3 pl-4 pr-2.5 text-left transition-colors hover:bg-tertiary"
+        className="flex h-11 w-full cursor-pointer items-center justify-between border border-border-secondary bg-background-secondary pl-3.5 pr-2.5 text-left transition-colors hover:border-white/50"
       >
-        <span className="flex items-center gap-4">
-          <FaMagnifyingGlass aria-hidden className="h-4 w-4 shrink-0 text-text-muted" />
-          <span className="text-base font-medium leading-4 text-text-muted">Pesquisar</span>
+        <span className="flex items-center gap-3">
+          <FaMagnifyingGlass aria-hidden className="h-3.5 w-3.5 shrink-0 text-white/45" />
+          <span className="text-[13px] font-medium leading-4 text-white/45">Pesquisar</span>
         </span>
-        <kbd className="font-sans text-base font-medium leading-4 text-border-input">Ctrl+F</kbd>
+        <kbd className="border border-border-secondary px-1.5 py-0.5 font-sans text-[10px] font-semibold uppercase leading-3 text-white/40">Ctrl+F</kbd>
       </button>
 
       {open && <SearchModal basePath={basePath} onClose={() => setOpen(false)} />}

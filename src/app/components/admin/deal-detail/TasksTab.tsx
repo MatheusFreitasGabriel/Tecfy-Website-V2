@@ -124,7 +124,7 @@ export default function TasksTab({ tasks, now, onCreate, onToggle, onEdit, onDel
                 aria-label={`${longDay(key)}${items.length ? `, ${items.length} tarefa(s)` : ""}${isToday ? ", hoje" : ""}`}
                 onClick={() => setSelected(selected === key ? null : key)}
                 className={`flex h-12 flex-col items-center justify-center gap-1 rounded-lg text-sm font-semibold transition-colors aria-selected:outline aria-selected:outline-2 aria-selected:outline-admin-accent ${
-                  isToday ? "bg-admin-primary text-text-primary" : items.length ? "bg-admin-card text-text-primary hover:bg-admin-badge" : "text-admin-text-description hover:bg-admin-card"
+                  isToday ? "bg-admin-primary text-admin-primary-text" : items.length ? "bg-admin-card text-text-primary hover:bg-admin-badge" : "text-admin-text-description hover:bg-admin-card"
                 }`}
               >
                 {day}

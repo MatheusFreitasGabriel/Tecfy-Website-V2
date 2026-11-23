@@ -6,7 +6,7 @@ import type { Option } from "@/lib/admin/crm/options";
 import Tooltip from "../form/Tooltip";
 
 const controlClass =
-  "h-11 w-full min-w-0 rounded-[10px] bg-background-kpi text-[13px] font-medium leading-5 text-text-primary outline outline-1 -outline-offset-1 outline-admin-picker-border transition-[outline-color] focus:outline-2 focus:outline-admin-primary [color-scheme:dark]";
+  "h-11 w-full min-w-0 rounded-lg bg-background-kpi text-[13px] font-medium leading-5 text-text-primary outline outline-1 -outline-offset-1 outline-admin-picker-border transition-[outline-color] focus:outline-2 focus:outline-admin-primary [color-scheme:dark]";
 
 /** Campo de busca das listas (contatos, empresas). */
 export function SearchInput({ value, onChange, placeholder }: { value: string; onChange: (v: string) => void; placeholder: string }) {
@@ -72,7 +72,7 @@ export function ReloadButton({ onClick, reloading }: { onClick: () => void; relo
         disabled={reloading}
         aria-label={reloading ? "Atualizando a lista" : "Atualizar lista"}
         aria-busy={reloading}
-        className="inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-[10px] bg-background-kpi text-text-primary outline outline-1 -outline-offset-1 outline-admin-picker-border transition-colors hover:bg-admin-card focus-visible:outline-2 focus-visible:outline-admin-primary disabled:cursor-wait"
+        className="inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-lg bg-background-kpi text-text-primary outline outline-1 -outline-offset-1 outline-admin-picker-border transition-colors hover:bg-admin-card focus-visible:outline-2 focus-visible:outline-admin-primary disabled:cursor-wait"
       >
         <FaArrowsRotate aria-hidden className={`h-3.5 w-3.5 ${reloading ? "animate-spin motion-reduce:animate-none" : ""}`} />
       </button>

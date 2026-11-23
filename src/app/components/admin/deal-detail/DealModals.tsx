@@ -518,7 +518,7 @@ export function MovePipelineModal({
                   role="radio"
                   aria-checked={stageId === s.id}
                   onClick={() => setStageId(s.id)}
-                  className="h-9 rounded-lg px-3 text-[13px] font-semibold text-admin-text-label outline outline-1 -outline-offset-1 outline-admin-card-border transition-colors hover:bg-admin-card aria-checked:bg-admin-primary aria-checked:text-text-primary aria-checked:outline-admin-primary"
+                  className="h-9 rounded-lg px-3 text-[13px] font-semibold text-admin-text-label outline outline-1 -outline-offset-1 outline-admin-card-border transition-colors hover:bg-admin-card aria-checked:bg-admin-primary aria-checked:text-admin-primary-text aria-checked:outline-admin-primary"
                 >
                   <span className="opacity-60">{i + 1}.</span> {s.name}
                 </button>

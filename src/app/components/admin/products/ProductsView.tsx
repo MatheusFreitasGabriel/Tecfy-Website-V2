@@ -14,6 +14,7 @@ import ConfirmDialog from "../form/ConfirmDialog";
 import { callApi } from "../deal-detail/dealApi";
 import { formatDateTime } from "../leads/leadVisuals";
 import PriceChangeModal from "./PriceChangeModal";
+import FilterTabs from "../shared/FilterTabs";
 import ProductCard from "./ProductCard";
 import ProductFormModal from "./ProductFormModal";
 import PromotionModal from "./PromotionModal";
@@ -129,7 +130,7 @@ export default function ProductsView({ basePath, products, totals, site, rendere
     try {
       const { ok, data } = await callApi(`${basePath}/api/crm/products/${product.id}`, "DELETE", {});
       setDeleting(null);
-      if (ok) refresh(`"${product.name}" foi excluído.`);
+      if (ok) refresh(`"${product.name}" foi excluído${published?.some((x) => x.id === product.id) ? " e saiu do site" : ""}.`);
       else setNotice({ tone: "error", text: data.error === "product_in_use" ? "Este produto já tem vendas: desative em vez de excluir." : "Não foi possível excluir. Tente de novo." });
     } catch {
       fail(0);
@@ -192,7 +193,10 @@ export default function ProductsView({ basePath, products, totals, site, rendere
             </p>
             <p className="mt-0.5 text-[13px] font-medium leading-5 text-admin-text-description">
               {pending === null ? (
-                <>Marque os produtos com &quot;Mostrar no site&quot; e publique: a partir daí os preços da landing vêm daqui. {onSite.length} produto(s) marcado(s).</>
+                <>
+                  Enquanto você não publicar, a landing mostra os planos fixos do código — editar, excluir ou desativar aqui ainda não muda o site. Marque os produtos com &quot;Mostrar no site&quot; e
+                  publique: a partir daí o site segue o painel. {onSite.length} produto(s) marcado(s).
+                </>
               ) : pending === 0 ? (
                 <>
                   Publicado {formatDateTime(site.published_at)}
@@ -254,30 +258,18 @@ export default function ProductsView({ basePath, products, totals, site, rendere
         <section className="flex flex-col gap-6">
           <div className="flex flex-col gap-4 xl:flex-row xl:items-center xl:justify-between">
             {/* Filtro no estilo do seletor de planos do site */}
-            <div role="group" aria-label="Mostrar" className="flex w-fit max-w-full overflow-x-auto border border-border-secondary p-1">
-              {(
-                [
-                  { value: "ativos", label: "Ativos", count: active.length },
-                  { value: "no_site", label: "No site", count: onSite.length },
-                  { value: "promocao", label: "Em promoção", count: promos.length },
-                  { value: "inativos", label: "Inativos", count: products.length - active.length },
-                  { value: "todos", label: "Todos", count: products.length },
-                ] as { value: StatusFilter; label: string; count: number }[]
-              ).map((o) => (
-                <button
-                  key={o.value}
-                  type="button"
-                  aria-pressed={status === o.value}
-                  onClick={() => setStatus(o.value)}
-                  className={`flex h-9 shrink-0 items-center gap-2 px-4 text-xs font-bold uppercase tracking-wide transition-colors ${
-                    status === o.value ? "bg-white text-background" : "text-white/50 hover:text-white"
-                  }`}
-                >
-                  {o.label}
-                  <span className={`text-[11px] font-semibold ${status === o.value ? "text-background/50" : "text-white/30"}`}>{o.count}</span>
-                </button>
-              ))}
-            </div>
+            <FilterTabs
+              label="Mostrar"
+              value={status}
+              onChange={setStatus}
+              options={[
+                { value: "ativos", label: "Ativos", count: active.length },
+                { value: "no_site", label: "No site", count: onSite.length },
+                { value: "promocao", label: "Em promoção", count: promos.length },
+                { value: "inativos", label: "Inativos", count: products.length - active.length },
+                { value: "todos", label: "Todos", count: products.length },
+              ]}
+            />
             <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
               <label className="relative block w-full sm:w-[320px]">
                 <span className="sr-only">Buscar produto</span>
@@ -336,7 +328,15 @@ export default function ProductsView({ basePath, products, totals, site, rendere
                     canMoveDown={sort === "catalogo" && index < catalogOrder.length - 1}
                     busy={busyId === p.id}
                     onEdit={() => setEditing(p)}
-                    onToggleActive={() => void patch(p, { active: !p.active }, p.active ? `"${p.name}" foi desativado.` : `"${p.name}" foi ativado.`)}
+                    onToggleActive={() =>
+                      void patch(
+                        p,
+                        { active: !p.active },
+                        p.active
+                          ? `"${p.name}" foi desativado${published?.some((x) => x.id === p.id) ? " e saiu do site" : ""}.`
+                          : `"${p.name}" foi ativado.${p.site_visible && published ? " Publique para ele voltar ao site." : ""}`,
+                      )
+                    }
                     onMove={(direction) => void patch(p, { move: direction }, "Ordem do catálogo atualizada.")}
                     onDelete={() => setDeleting(p)}
                     onDuplicate={() => void duplicate(p)}
@@ -525,8 +525,13 @@ export default function ProductsView({ basePath, products, totals, site, rendere
           onConfirm={() => void remove()}
           message={
             <>
-              <strong className="text-text-primary">{deleting.name}</strong> nunca foi vendido, então pode ser excluído de vez. Se quiser só tirá-lo de &quot;Marcar como vendida&quot;, use
-              &quot;Desativar&quot;.
+              <strong className="text-text-primary">{deleting.name}</strong> nunca foi vendido, então pode ser excluído de vez.{" "}
+              {published?.some((x) => x.id === deleting.id)
+                ? "Ele também sai do site na hora."
+                : !published
+                  ? "Atenção: o site ainda mostra os planos fixos do código; o painel só controla o site depois da 1ª publicação."
+                  : ""}{" "}
+              Se quiser só tirá-lo de &quot;Marcar como vendida&quot;, use &quot;Desativar&quot;.
             </>
           }
         />

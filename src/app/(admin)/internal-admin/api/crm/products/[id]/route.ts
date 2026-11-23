@@ -53,7 +53,8 @@ export async function PATCH(request: Request, { params }: Context) {
     }
     if (typeof body.active === "boolean") {
       const result = await setProductActive(id, body.active, actor);
-      if (result.changed) invalidateCrm(CRM_TAGS.products, productTag(id));
+      if (result.leftSite) invalidateSite(CRM_TAGS.products, productTag(id));
+      else if (result.changed) invalidateCrm(CRM_TAGS.products, productTag(id));
       return Response.json(result);
     }
     const parsed = validateProductForm((body.product ?? {}) as Partial<ProductForm>);
@@ -74,7 +75,7 @@ export async function DELETE(request: Request, { params }: Context) {
   if (guard instanceof Response) return guard;
   try {
     await deleteProduct(id);
-    invalidateCrm(CRM_TAGS.products, productTag(id));
+    invalidateSite(CRM_TAGS.products, productTag(id));
     return Response.json({ deleted: true });
   } catch (error) {
     return errorResponse(error, "delete product");

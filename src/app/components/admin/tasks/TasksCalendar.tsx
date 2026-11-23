@@ -147,7 +147,7 @@ export default function TasksCalendar({ tasks, admins, currentUid, now, basePath
                 ["week", "Semana"],
               ] as const
             ).map(([value, label]) => (
-              <button key={value} type="button" role="tab" aria-selected={mode === value} onClick={() => setMode(value)} className="rounded-md px-3 text-[13px] font-semibold text-admin-text-description aria-selected:bg-admin-primary aria-selected:text-text-primary">
+              <button key={value} type="button" role="tab" aria-selected={mode === value} onClick={() => setMode(value)} className="rounded-md px-3 text-[13px] font-semibold text-admin-text-description aria-selected:bg-admin-primary aria-selected:text-admin-primary-text">
                 {label}
               </button>
             ))}
@@ -238,7 +238,7 @@ function DayCell({
           type="button"
           onClick={onSelect}
           aria-label={`${longDay.format(utc(day))}: ${tasks.length} tarefa(s)`}
-          className={`flex h-7 min-w-7 items-center justify-center rounded-full px-1.5 text-xs font-semibold ${isToday ? "bg-admin-primary text-text-primary" : outside ? "text-admin-text-hint" : "text-admin-text-label hover:bg-admin-card"}`}
+          className={`flex h-7 min-w-7 items-center justify-center rounded-full px-1.5 text-xs font-semibold ${isToday ? "bg-admin-primary text-admin-primary-text" : outside ? "text-admin-text-hint" : "text-admin-text-label hover:bg-admin-card"}`}
         >
           {Number(day.slice(8))}
         </button>

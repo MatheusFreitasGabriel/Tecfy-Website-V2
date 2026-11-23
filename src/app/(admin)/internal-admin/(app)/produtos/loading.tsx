@@ -9,7 +9,7 @@ export default function Loading() {
           <div className={`${block} h-4 w-28`} />
           <div className={`${block} h-8 w-72`} />
         </div>
-        <div className={`${block} h-11 w-40 rounded-[10px]`} />
+        <div className={`${block} h-11 w-40 rounded-lg`} />
       </div>
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-5">
         {Array.from({ length: 5 }, (_, i) => (

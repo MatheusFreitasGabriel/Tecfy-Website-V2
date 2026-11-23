@@ -4,7 +4,7 @@ import { useId } from "react";
 import { FaChevronDown } from "react-icons/fa6";
 import type { Option } from "@/lib/admin/crm/options";
 
-/** Base visual dos campos (design: fundo #0D0D0D, borda #3B3B3B, 44px de altura, raio 8). */
+/** Base visual dos campos (identidade do site: fundo #080808, borda fina #3B3B3B, cantos retos, foco branco). */
 export const inputClass =
   "w-full min-w-0 rounded-lg bg-admin-input px-3.5 text-sm font-medium leading-5 text-admin-text-input outline outline-1 -outline-offset-1 outline-admin-input-border placeholder:text-admin-text-hint transition-[outline-color] focus:outline-2 focus:outline-admin-primary aria-[invalid=true]:outline-admin-danger [color-scheme:dark]";
 
@@ -24,7 +24,7 @@ export function Field({ label, required, error, hint, className, children }: Fie
   const messageId = `${id}-message`;
   return (
     <div className={`flex min-w-0 flex-col gap-[3px] ${className ?? ""}`}>
-      <label htmlFor={id} className="text-[13px] font-medium leading-[19px] text-admin-text-label">
+      <label htmlFor={id} className="pb-1 text-[11px] font-semibold uppercase leading-4 tracking-[0.06em] text-white/55">
         {label}
         {required && " *"}
       </label>

@@ -41,7 +41,7 @@ export default function Modal({
   const descriptionId = `${id}-description`;
 
   return createPortal(
-    <div className="admin-modal-overlay fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4 backdrop-blur-sm">
+    <div className="admin-modal-overlay fixed inset-0 z-50 flex items-center justify-center bg-black/80 p-4 backdrop-blur-sm">
       <div
         ref={panelRef}
         role="dialog"
@@ -49,13 +49,13 @@ export default function Modal({
         aria-labelledby={titleId}
         aria-describedby={description ? descriptionId : undefined}
         tabIndex={-1}
-        className={`admin-modal-panel flex max-h-[calc(100vh-32px)] w-full ${widthClass} flex-col overflow-hidden rounded-2xl bg-background-kpi shadow-2xl outline outline-1 -outline-offset-1 outline-border-input focus:outline-border-input`}
+        className={`admin-modal-panel flex max-h-[calc(100vh-32px)] w-full ${widthClass} flex-col overflow-hidden bg-background shadow-2xl shadow-black outline outline-1 -outline-offset-1 outline-border-secondary focus:outline-border-secondary`}
       >
         <header className="flex shrink-0 items-start justify-between gap-6 border-b border-admin-divider px-6 py-6 sm:px-8">
           <div className="flex min-w-0 flex-col gap-2">
             <h2
               id={titleId}
-              className={`font-semibold text-text-primary ${titleSize === "lg" ? "text-[26px] leading-8" : "text-2xl leading-[30px]"}`}
+              className={`font-bold uppercase tracking-tight text-text-primary ${titleSize === "lg" ? "text-2xl leading-8" : "text-xl leading-7"}`}
             >
               {title}
             </h2>
@@ -72,10 +72,10 @@ export default function Modal({
             type="button"
             onClick={onClose}
             aria-label="Fechar"
-            className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-[10px] transition-colors ${
+            className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-lg transition-colors ${
               closeStyle === "accent"
-                ? "text-admin-accent hover:bg-admin-card"
-                : "bg-admin-card text-text-primary outline outline-1 -outline-offset-1 outline-admin-button-border hover:bg-admin-badge"
+                ? "border border-admin-button-border text-white/70 hover:border-white/60 hover:text-white"
+                : "border border-admin-button-border text-white/70 hover:border-white/60 hover:text-white"
             }`}
           >
             <FaXmark aria-hidden className="h-5 w-5" />

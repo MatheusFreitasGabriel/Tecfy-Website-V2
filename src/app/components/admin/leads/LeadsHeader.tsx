@@ -42,7 +42,7 @@ export default function LeadsHeader({ total, basePath, admins, currentUid, onCre
       <div className="flex shrink-0 flex-wrap gap-4">
         <Link
           href={`${basePath}/leads/importar`}
-          className="inline-flex h-11 items-center justify-center gap-2 whitespace-nowrap rounded-[10px] bg-background-kpi px-6 text-sm font-semibold leading-5 text-text-primary outline outline-1 -outline-offset-1 outline-admin-picker-border transition-colors hover:bg-admin-badge focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-admin-accent"
+          className="inline-flex h-11 items-center justify-center gap-2 whitespace-nowrap rounded-lg bg-background-kpi px-6 text-sm font-semibold leading-5 text-text-primary outline outline-1 -outline-offset-1 outline-admin-picker-border transition-colors hover:bg-admin-badge focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-admin-accent"
         >
           <FaFileImport aria-hidden className="h-3.5 w-3.5" />
           Importar lista
