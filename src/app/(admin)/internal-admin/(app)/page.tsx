@@ -3,6 +3,7 @@ import { FaHouse, FaPlus } from "react-icons/fa6";
 import LogoutButton from "@/app/components/admin/LogoutButton";
 import AttentionPanel from "@/app/components/admin/dashboard/AttentionPanel";
 import { DashboardDetails, HeadlineStrip } from "@/app/components/admin/dashboard/DashboardKpis";
+import RefreshDataButton from "@/app/components/admin/dashboard/RefreshDataButton";
 import RevenueChart from "@/app/components/admin/dashboard/RevenueChart";
 import { getAdminBasePath } from "@/lib/adminPath";
 import { getAdminProfile, getAdminSession } from "@/lib/admin/session";
@@ -74,6 +75,7 @@ export default async function AdminDashboardPage() {
           <Link href={href("/tarefas?nova=1")} className={action}>
             <FaPlus aria-hidden className="h-3 w-3" /> Tarefa
           </Link>
+          <RefreshDataButton basePath={basePath} />
           <LogoutButton basePath={basePath} />
         </div>
       </header>
