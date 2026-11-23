@@ -4,6 +4,17 @@ import { getAuth, type Auth } from "firebase-admin/auth";
 import { getFirestore, type Firestore } from "firebase-admin/firestore";
 
 /**
+ * Chave privada como vem da env, em qualquer formato comum de colagem (Vercel, .env, JSON):
+ * aspas em volta, `\n` literais (ou `\\n`), quebras reais do Windows (`\r\n`) e espaços nas pontas.
+ */
+export function normalizePrivateKey(raw: string): string {
+  let key = raw.trim();
+  if ((key.startsWith('"') && key.endsWith('"')) || (key.startsWith("'") && key.endsWith("'"))) key = key.slice(1, -1).trim();
+  key = key.replace(/\\\\n/g, "\n").replace(/\\r\\n|\\n/g, "\n").replace(/\r\n/g, "\n");
+  return key.endsWith("\n") ? key : `${key}\n`;
+}
+
+/**
  * Inicialização preguiçosa: o app só é criado na primeira chamada (em tempo de
  * requisição), não no import. Assim o `next build` não quebra quando as envs do
  * Firebase não estão presentes no ambiente de build.
@@ -30,7 +41,7 @@ function getAdminApp(): App {
     credential: cert({
       projectId,
       clientEmail,
-      privateKey: privateKey.replace(/\\n/g, "\n"),
+      privateKey: normalizePrivateKey(privateKey),
     }),
   });
 }
